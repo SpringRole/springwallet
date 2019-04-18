@@ -2,8 +2,13 @@
   "name": "springwallet",
   "version": "0.0.1",
   "description": "Wallet for SpringRole users",
-  "main": "index.js",
+  "main": "dist/main.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "dev": "webpack --mode development --module-bind js=babel-loader",
+    "build": "webpack --mode production --module-bind js=babel-loader",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -11,20 +16,39 @@
     "url": "git+https://github.com/SpringRole/SpringWallet.git"
   },
   "keywords": [
-    "Springrole",
+    "SpringRole",
     "Spring",
     "Token",
     "Secure",
-    "Wallet"
+    "Wallet",
+    "Attestation",
+    "Protocol",
+    "VanityURL"
   ],
-  "author": "SpringRole",
+  "author": "SpringRole <https://github.com/SpringRole>",
+  "contributors": [
+    {
+      "name": "Suraj Rawat",
+      "email": "suraj.raw120@gmail.com",
+      "url": "https://github.com/nervehammer"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/SpringRole/SpringWallet/issues"
   },
   "homepage": "https://github.com/SpringRole/SpringWallet#readme",
   "dependencies": {
-    "bip39": "^3.0.0",
-    "ethereumjs-util": "^6.1.0"
+    "bip39": "^3.0.1",
+    "ethereumjs-wallet": "^0.6.3",
+    "tabookey-gasless": "^0.3.3-a",
+    "web3": "^1.0.0-beta.52"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "babel-loader": "^8.0.5",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.0"
   }
 }
