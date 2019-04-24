@@ -1,5 +1,5 @@
 {
-  "name": "springwallet",
+  "name": "springrolewallet",
   "version": "0.0.1",
   "description": "Wallet for SpringRole users",
   "main": "index.js",
