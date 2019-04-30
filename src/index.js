@@ -12,9 +12,9 @@ SpringWallet.generateMnemonic = bip39.generateMnemonic(128, crypto.randomBytes);
 
 /**
  * Function to create Wallet using encrypted mnemonic and password
- * @param data - Buffer or hex-encoded string of the encrypted mnemonic
- * @param password - Password for data
- * @return the wallet address
+ * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
+ * @param password - Password
+ * @return wallet address
  */
 SpringWallet.initializeWallet = async function initializeWallet(
   encryptedMnemonic,
@@ -30,6 +30,12 @@ SpringWallet.initializeWallet = async function initializeWallet(
   return address;
 };
 
+/**
+ * Function to encrypt a mnemonic using password
+ * @param phrase - string of the encrypted mnemonic
+ * @param password - Password
+ * @return Buffer of the encrypted mnemonic
+ */
 SpringWallet.encryptMnemonic = function encryptMnemonic(phrase, password) {
   return Promise.resolve().then(() => {
     if (!bip39.validateMnemonic(phrase)) {
@@ -114,50 +120,33 @@ function decryptMnemonicBuffer(dataBuffer, password) {
 
 /**
  * Decrypt a raw mnemonic phrase with a password
- * @param data - Buffer or hex-encoded string of the encrypted mnemonic
- * @param password - Password for data
- * @return the raw mnemonic phrase
+ * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
+ * @param password - Password
+ * @return raw mnemonic phrase
  */
-async function decryptMnemonic(data, password) {
-  const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'hex');
+async function decryptMnemonic(encryptedMnemonic, password) {
+  const dataBuffer = Buffer.isBuffer(encryptedMnemonic)
+    ? encryptedMnemonic
+    : Buffer.from(encryptedMnemonic, 'hex');
   return decryptMnemonicBuffer(dataBuffer, password);
 }
 SpringWallet.decryptMnemonic = decryptMnemonic;
 
 /**
- * Function to set currently loggedin user in a local storage
+ * Function to store user wallet details in browser's local storage
+ * @param id - ID to identify encryptedMnemonic of the corresponding user
+ * @param address - Wallet address
+ * @param encryptedMnemonic - Hex-encoded string of the encrypted mnemonic
  */
-SpringWallet.setCurrentUser = function setCurrentUser(id) {
-  localStorage.setItem('currentUser', id);
-};
-
-/**
- * Function to get currently loggedin user from a local storage
- */
-SpringWallet.getCurrentUser = function getCurrentUser() {
-  return localStorage.getItem('currentUser');
-};
-
-/**
- * Function to get user wallet address using ID from local storage
- */
-SpringWallet.getUserAddress = function getUserAddress(id) {
-  const usrData = JSON.parse(localStorage.getItem(id));
-  return usrData.address;
-};
-
-/**
- * Function to store user encrypted JSON wallet and address in local storage
- */
-SpringWallet.storeEncryptedMnemonic = function storeEncryptedMnemonic(
+SpringWallet.storeWalletDetails = function storeWalletDetails(
   id,
   address,
-  encryptMnemonic
+  encryptedMnemonic
 ) {
   const usrData = {
     id: id,
     address: address,
-    emnemonic: encryptMnemonic
+    encryptedMnemonic: encryptedMnemonic
   };
 
   localStorage.setItem(id, JSON.stringify(usrData));
@@ -165,18 +154,23 @@ SpringWallet.storeEncryptedMnemonic = function storeEncryptedMnemonic(
 };
 
 /**
- * Function to fetch encrypted mnemonic from local storage
+ * Function to fetch user wallet details from browser's local storage
+ * @param id - ID of the user
  */
-SpringWallet.fetchEncryptedMnemonic = function fetchEncryptedMnemonic(id) {
-  const usrData = JSON.parse(localStorage.getItem(id));
-  return usrData.emnemonic;
+SpringWallet.fetchWalletDetails = function fetchWalletDetails(id) {
+  return JSON.parse(localStorage.getItem(id));
 };
 
 /**
- * Function to unlock encrypted JSON wallet from local storage
- * @returns privatekey
+ * Function to unlock a wallet using provided encryptedMnemonic and password
+ * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
+ * @param password -
+ * @returns keypair - JSON of wallet address and Buffer of the private key
  */
-SpringWallet.unlockWallet = async function unlockWallet(encryptedMnemonic, password) {
+SpringWallet.unlockWallet = async function unlockWallet(
+  encryptedMnemonic,
+  password
+) {
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
   const hdKey = HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
   const wallet = hdKey
