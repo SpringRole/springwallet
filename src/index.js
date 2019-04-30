@@ -8,7 +8,7 @@ var SpringWallet = function() {};
 /**
  * Function to generate 12 words random mnemonic phrase
  */
-SpringWallet.generateMnemonic = bip39.generateMnemonic(128, randomBytes);
+SpringWallet.generateMnemonic = bip39.generateMnemonic(128, crypto.randomBytes);
 
 /**
  * Function to create Wallet using encrypted mnemonic and password
@@ -65,7 +65,7 @@ SpringWallet.encryptMnemonic = function encryptMnemonic(phrase, password) {
     ]);
     return payload;
   });
-}
+};
 
 function decryptMnemonicBuffer(dataBuffer, password) {
   return Promise.resolve().then(() => {
@@ -118,10 +118,11 @@ function decryptMnemonicBuffer(dataBuffer, password) {
  * @param password - Password for data
  * @return the raw mnemonic phrase
  */
-function decryptMnemonic(data, password) {
+async function decryptMnemonic(data, password) {
   const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'hex');
   return decryptMnemonicBuffer(dataBuffer, password);
 }
+SpringWallet.decryptMnemonic = decryptMnemonic;
 
 /**
  * Function to set currently loggedin user in a local storage
