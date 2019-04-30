@@ -1,6 +1,6 @@
 {
-  "name": "springrolewallet",
-  "version": "0.0.3",
+  "name": "springwallet",
+  "version": "0.1.0",
   "description": "Wallet for SpringRole users",
   "main": "index.js",
   "files": [
