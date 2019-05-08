@@ -42,6 +42,7 @@ SpringWallet.initializeWallet = async function initializeWallet(
   encryptedMnemonic
 ) {
   const mnemonic = await decryptMnemonic(encryptedMnemonic, window.sw_pass);
+  delete window.sw_pass;
   const Wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
   const address = Wallet.getAddress();
   const privateKey = Wallet.privateKey();
@@ -148,11 +149,11 @@ function decryptMnemonicBuffer(dataBuffer, password) {
  * @param password - Password
  * @return raw mnemonic phrase
  */
-async function decryptMnemonic(encryptedMnemonic) {
+async function decryptMnemonic(encryptedMnemonic, password) {
   const dataBuffer = Buffer.isBuffer(encryptedMnemonic)
     ? encryptedMnemonic
     : Buffer.from(encryptedMnemonic, 'hex');
-  const mnemonic = await decryptMnemonicBuffer(dataBuffer, window.sw_pass);
+  const mnemonic = await decryptMnemonicBuffer(dataBuffer, password);
   return mnemonic;
 }
 SpringWallet.decryptMnemonic = decryptMnemonic;
