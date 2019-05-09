@@ -8,6 +8,9 @@ const SPRINGROLE_RPC_URL = 'https://chain.springrole.com';
 const SprinChain_ID = 202242799;
 const saltRounds = 10;
 
+let hexPassword;
+let walletInstance;
+
 const ATTESTATION_ABI = [
   'event Attest(address _address,string _type,string _data)',
   'function write(string _type,string _data) public returns (bool)'
@@ -21,10 +24,12 @@ const VANITYURL_ABI = [
 
 var SpringWallet = function() {};
 
-SpringWallet.hashPassword = async function hashPassword(password) {
-  window.sw_pass = password;
+SpringWallet.storeAndHashPassword = async function storeAndHashPassword(
+  password
+) {
   const salt = await bcrypt.genSalt(saltRounds);
   const hashPassword = await bcrypt.hash(password, salt);
+  hexPassword = Buffer.from(password, 'utf-8').toString('hex');
   return hashPassword;
 };
 
@@ -38,25 +43,32 @@ SpringWallet.generateMnemonic = bip39.generateMnemonic(128, crypto.randomBytes);
  * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
  * @return walet address
  */
-SpringWallet.initializeWallet = async function initializeWallet(
+SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWallet(
   encryptedMnemonic
 ) {
-  const mnemonic = await decryptMnemonic(encryptedMnemonic, window.sw_pass);
-  delete window.sw_pass;
+  if (!hexPassword) {
+    throw new Error('Not logged in');
+  }
+  const password = Buffer.from(hexPassword, 'hex').toString();
+  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
   const Wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
   const address = Wallet.getAddress();
-  const privateKey = Wallet.privateKey();
-  localStorage.setItem(address, privateKey);
+  localStorage.setItem(address, encryptedMnemonic);
+  await unlockWallet(address);
   return address;
 };
 
 /**
  * Function to encrypt a mnemonic using password
  * @param phrase - string of the encrypted mnemonic
- * @return Buffer of the encrypted mnemonic
+ * @return hex-encoded string of the encrypted mnemonic
  */
 SpringWallet.encryptMnemonic = function encryptMnemonic(phrase) {
   return Promise.resolve().then(() => {
+    if (!hexPassword) {
+      throw new Error('Not logged in');
+    }
+
     if (!bip39.validateMnemonic(phrase)) {
       throw new Error('Not a valid bip39 nmemonic');
     }
@@ -69,7 +81,7 @@ SpringWallet.encryptMnemonic = function encryptMnemonic(phrase) {
     // AES-128-CBC with SHA256 HMAC
     const salt = crypto.randomBytes(16);
     const keysAndIV = crypto.pbkdf2Sync(
-      window.sw_pass,
+      Buffer.from(hexPassword, 'hex').toString(),
       salt,
       100000,
       48,
@@ -94,7 +106,8 @@ SpringWallet.encryptMnemonic = function encryptMnemonic(phrase) {
       hmacDigest,
       Buffer.from(cipherText, 'hex')
     ]);
-    return payload;
+
+    return payload.toString('hex');
   });
 };
 
@@ -156,13 +169,12 @@ async function decryptMnemonic(encryptedMnemonic, password) {
   const mnemonic = await decryptMnemonicBuffer(dataBuffer, password);
   return mnemonic;
 }
-SpringWallet.decryptMnemonic = decryptMnemonic;
 
 /**
  * Function to fetch user wallet's encrypted mnemonic from browser's session storage
  * @param address - user wallet address
  */
-function getUnlockedPrivateKey(address) {
+function getEncryptedMnemonic(address) {
   if (!localStorage.getItem(address)) {
     return Error('User not logged in');
   }
@@ -177,14 +189,29 @@ SpringWallet.fetchWalletBalance = function fetchWalletBalance(address) {
   });
 };
 
+/**
+ * Function to unlock a wallet using provided encryptedMnemonic and password
+ * @param address - Wallet address
+ * @param password - plain text password
+ */
+async function unlockWallet(address, password) {
+  const encryptedMnemonic = getEncryptedMnemonic(address);
+  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
+  walletInstance = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
+  return true;
+}
+SpringWallet.unlockWallet = unlockWallet;
+
 SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTransaction(
-  txParams,
-  address
+  txParams
 ) {
+  if (!walletInstance) {
+    throw new Error('Please Unlock your Wallet');
+  }
+
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
   let contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
-  const wallet = new ethers.Wallet(getUnlockedPrivateKey(address));
-  let contractWithSigner = contract.connect(wallet);
+  let contractWithSigner = contract.connect(walletInstance);
   let tx = await contractWithSigner.reserve(
     txParams.vanityUrl,
     txParams.springrole_id
@@ -193,27 +220,29 @@ SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTran
 };
 
 SpringWallet.sendAttestationTransaction = async function sendAttestationTransaction(
-  txParams,
-  address
+  txParams
 ) {
+  if (!walletInstance) {
+    throw new Error('Please Unlock your Wallet');
+  }
+
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
   let contract = new ethers.Contract(
     txParams.to,
     ATTESTATION_ABI,
     httpProvider
   );
-  const wallet = new ethers.Wallet(getUnlockedPrivateKey(address));
-  let contractWithSigner = contract.connect(wallet);
+  let contractWithSigner = contract.connect(walletInstance);
   let tx = await contractWithSigner.write(txParams._type, txParams._data);
   return tx.hash;
 };
 
-SpringWallet.sendTransaction = async function sendTransaction(
-  txParams,
-  address
-) {
+SpringWallet.sendTransaction = async function sendTransaction(txParams) {
+  if (!walletInstance) {
+    throw new Error('Please Unlock your Wallet');
+  }
+
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
-  const wallet = new ethers.Wallet(getUnlockedPrivateKey(address));
   let transaction = {
     nonce: await httpProvider.getTransactionCount(tx.from),
     gasLimit: txParams.gasLimit,
@@ -224,7 +253,7 @@ SpringWallet.sendTransaction = async function sendTransaction(
     chainId: SprinChain_ID
   };
 
-  return wallet.sign(transaction).then(signedTransaction => {
+  return walletInstance.sign(transaction).then(signedTransaction => {
     return httpProvider.sendTransaction(signedTransaction);
   });
 };
