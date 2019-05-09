@@ -8,7 +8,7 @@
 
 SpringWallet - A simple wallet for flexible identity management
 
-## Documentation
+## Usage
 
 1.  Install `springwallet` with `npm`.
 
@@ -28,38 +28,40 @@ const SpringWallet = require('springwallet')
 const mnemonic = SpringWallet.generateMnemonic
 ```
 
-4. Encrypt mnemonic with password
+4. Store Hex Password in Client and return hashed password for login purpose.
 
 ```js
-SpringWallet.encryptMnemonic(mnemonic, password).then(function(encryptedMnemonic) {
-    // DO Something
-    console.log("Buffer of encryptedMnemonic:", encryptedMnemonic);
-    console.log("Hex-encoded sttring of encryptedMnemonic:", encryptedMnemonic.toString('hex'));
+SpringWallet.storeAndHashPassword(password).then(function(hashedPassword) {
+    // Do login with hashed password
+    console.log("Hashed password:", hashedPassword);
 })
 ```
-5. Initalize a wallet
+5. Encrypt mnemonic
 
 ```js
-SpringWallet.initializeWallet(encryptedMnemonic, password).then(function(walletAddress) {
+SpringWallet.encryptMnemonic(mnemonic).then(function(encryptedMnemonic) {
+    // DO Something
+    console.log("encryptedMnemonic:", encryptedMnemonic));
+})
+```
+Note: mnemonic will be encrypted with the stored password in client side.
+
+6. Initalize a wallet
+
+```js
+SpringWallet.initializeWallet(encryptedMnemonic).then(function(walletAddress) {
     // DO Something
 })
 ```
 Initalize wallet is required when you are going to assign this particular wallet address to a specified user
 
-6. Unlock a wallet
+7. Unlock a wallet
 
 ```js
-SpringWallet.unlockWallet(encryptedMnemonic, password).then(function(keypair) {
-    // DO Something like sign a transacrtion using web3
-    web3.eth.accounts.signTransaction(tx, keypair.privateKey [, callback]);
+SpringWallet.initializeAndUnlockWallet(encryptedMnemonic).then(function(address) {
+    // Do Something like map user id to it's wallet address in database
+    console.log("address:", address);
 })
-```
-This function returns wallet address and Buffer of a private key in JSON format
-
-7. Store User's wallet details to browser's local storage
-
-```js
-SpringWallet.storeWalletDetails(id, address, encryptedMnemonic)
 ```
 8. Fetch User's wallet details to browser's local storage
 
