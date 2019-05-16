@@ -1,14 +1,11 @@
 const bip39 = require('bip39');
 const crypto = require('crypto');
 const ethers = require('ethers');
-const bcrypt = require('bcrypt');
 
 const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
 const SPRINGROLE_RPC_URL = 'https://chain.springrole.com';
 const SprinChain_ID = 202242799;
-const saltRounds = 10;
 
-let hexPassword;
 let walletInstance;
 
 const ATTESTATION_ABI = [
@@ -24,14 +21,22 @@ const VANITYURL_ABI = [
 
 var SpringWallet = function() {};
 
-SpringWallet.storeAndHashPassword = async function storeAndHashPassword(
+SpringWallet.storeHexPassword = async function storeHexPassword(
   password
 ) {
-  const salt = await bcrypt.genSalt(saltRounds);
-  const hashPassword = await bcrypt.hash(password, salt);
-  hexPassword = Buffer.from(password, 'utf-8').toString('hex');
-  return hashPassword;
+  let hexPassword = Buffer.from(password, 'utf-8').toString('hex');
+  sessionStorage.setItem('pwd', hexPassword);
 };
+
+SpringWallet.getPassword = function getPassword() {
+  let password = Buffer.from(sessionStorage.getItem('pwd'), 'hex').toString();
+  if(!password) {
+    //TODO: create promptPassword function  
+    return promptPassword();
+  }
+
+  return password;
+}
 
 /**
  * Function to generate 12 words random mnemonic phrase
@@ -40,16 +45,14 @@ SpringWallet.generateMnemonic = bip39.generateMnemonic(128, crypto.randomBytes);
 
 /**
  * Function to initlalize Wallet on user device using encrypted mnemonic and password
- * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
+ * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
  * @return walet address
  */
 SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWallet(
   encryptedMnemonic
 ) {
-  if (!hexPassword) {
-    throw new Error('Not logged in');
-  }
-  const password = Buffer.from(hexPassword, 'hex').toString();
+
+  const password = await getPassword();
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
   const Wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
   const address = Wallet.getAddress();
@@ -65,9 +68,6 @@ SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWalle
  */
 SpringWallet.encryptMnemonic = function encryptMnemonic(phrase) {
   return Promise.resolve().then(() => {
-    if (!hexPassword) {
-      throw new Error('Not logged in');
-    }
 
     if (!bip39.validateMnemonic(phrase)) {
       throw new Error('Not a valid bip39 nmemonic');
@@ -81,7 +81,7 @@ SpringWallet.encryptMnemonic = function encryptMnemonic(phrase) {
     // AES-128-CBC with SHA256 HMAC
     const salt = crypto.randomBytes(16);
     const keysAndIV = crypto.pbkdf2Sync(
-      Buffer.from(hexPassword, 'hex').toString(),
+      await getPassword(),
       salt,
       100000,
       48,
@@ -176,6 +176,7 @@ async function decryptMnemonic(encryptedMnemonic, password) {
  */
 function getEncryptedMnemonic(address) {
   if (!localStorage.getItem(address)) {
+    // get encrypted keys from server
     return Error('User not logged in');
   }
   return localStorage.getItem(address);
@@ -194,7 +195,8 @@ SpringWallet.fetchWalletBalance = function fetchWalletBalance(address) {
  * @param address - Wallet address
  * @param password - plain text password
  */
-async function unlockWallet(address, password) {
+async function unlockWallet(address) {
+  const password = await getPassword();
   const encryptedMnemonic = getEncryptedMnemonic(address);
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
   walletInstance = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
@@ -206,9 +208,8 @@ SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTran
   txParams
 ) {
   if (!walletInstance) {
-    throw new Error('Please Unlock your Wallet');
+    await unlockWallet();
   }
-
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
   let contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
   let contractWithSigner = contract.connect(walletInstance);
@@ -223,7 +224,7 @@ SpringWallet.sendAttestationTransaction = async function sendAttestationTransact
   txParams
 ) {
   if (!walletInstance) {
-    throw new Error('Please Unlock your Wallet');
+    await unlockWallet();
   }
 
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
@@ -239,7 +240,7 @@ SpringWallet.sendAttestationTransaction = async function sendAttestationTransact
 
 SpringWallet.sendTransaction = async function sendTransaction(txParams) {
   if (!walletInstance) {
-    throw new Error('Please Unlock your Wallet');
+    await unlockWallet();
   }
 
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
