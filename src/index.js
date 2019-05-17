@@ -42,6 +42,25 @@ async function decryptContent(ciphertext) {
   return decryptedData.toString();
 }
 
+async function promptPassword() {
+  const {value: password} = await Swal.fire({
+    title: 'Enter your password',
+    input: 'password',
+    inputPlaceholder: 'Enter your password',
+    inputAttributes: {
+      maxlength: 50,
+      autocapitalize: 'off',
+      autocorrect: 'off'
+    }
+  })
+
+  if (!password) {
+    throw new Error('Password not entered');
+  }
+
+  return password; 
+}
+
 SpringWallet.storePassword = async function storePassword(
   password
 ) {
