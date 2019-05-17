@@ -42,21 +42,28 @@ async function decryptContent(ciphertext) {
   return decryptedData.toString();
 }
 
-SpringWallet.storeHexPassword = async function storeHexPassword(
+SpringWallet.storePassword = async function storePassword(
   password
 ) {
-  let hexPassword = Buffer.from(password, 'utf-8').toString('hex');
-  sessionStorage.setItem('pwd', hexPassword);
+  let encryptedPassword = await encryptContent(password);
+  sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
 };
 
-SpringWallet.getPassword = function getPassword() {
-  let password = Buffer.from(sessionStorage.getItem('pwd'), 'hex').toString();
+SpringWallet.getPassword = async function getPassword() {
+  let password = sessionStorage.getItem(STORAGE_SESSION_KEY); 
   if(!password) {
-    //TODO: create promptPassword function  
-    return promptPassword();
+    password = await promptPassword();
+    password.catch(err => {
+      if(!err) {
+        await storePassword(password);
+      }
+      return err;
+    });
+   
+    return password;
   }
-
-  return password;
+  const decryptPassword = await decryptContent(password);
+  return decryptPassword;
 }
 
 /**
