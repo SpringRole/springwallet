@@ -21,6 +21,27 @@ const VANITYURL_ABI = [
 
 var SpringWallet = function() {};
 
+async function encryptContent(plaintext) {
+  let key = await crypto.createHash('md5').update(plaintext).digest('hex');
+  const paddedKey = Buffer.from(('0'.repeat(32)).concat(key), 'hex');
+  const iv = crypto.randomBytes(16);
+  const cipher = await crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
+  const encryptedData = await Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const ciphertext =  paddedKey.concat(';').concat(iv.toString('hex')).concat(';').concat(encryptedData.toString('hex'));
+  return ciphertext;
+}
+
+async function decryptContent(ciphertext) {
+  let content = [];
+  content = ciphertext.split(';');
+  const key = await Buffer.from(content[0], 'hex');
+  const iv = await Buffer.from(content[1], 'hex');
+  const encryptedData = await Buffer.from(content[2], 'hex');
+  const cipher = await crypto.createDecipheriv('aes-256-cbc', key, iv)
+  const decryptedData = await Buffer.concat([cipher.update(encryptedData), cipher.final()])
+  return decryptedData.toString();
+}
+
 SpringWallet.storeHexPassword = async function storeHexPassword(
   password
 ) {
