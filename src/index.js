@@ -28,27 +28,23 @@ async function encryptContent(plaintext) {
     .createHash('md5')
     .update(plaintext)
     .digest('hex');
-  const paddedKey = Buffer.from('0'.repeat(32).concat(key), 'hex');
+  const paddedKey = Buffer.from(('0'.repeat(32)).concat(key), 'hex');
   const iv = crypto.randomBytes(16);
   const cipher = await crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
   const encryptedData = await Buffer.concat([
     cipher.update(plaintext),
     cipher.final()
   ]);
-  const ciphertext = paddedKey
-    .concat(';')
-    .concat(iv.toString('hex'))
-    .concat(';')
-    .concat(encryptedData.toString('hex'));
+  const ciphertext = Buffer.concat([paddedKey, iv, encryptedData]).toString('hex');
   return ciphertext;
 }
 
 async function decryptContent(ciphertext) {
-  let content = [];
-  content = ciphertext.split(';');
-  const key = await Buffer.from(content[0], 'hex');
-  const iv = await Buffer.from(content[1], 'hex');
-  const encryptedData = await Buffer.from(content[2], 'hex');
+
+  const dataBuffer = Buffer.from(ciphertext, 'hex');
+  const key = dataBuffer.slice(0,32);
+  const iv = dataBuffer.slice(32,48);
+  const encryptedData = dataBuffer.slice(48);
   const cipher = await crypto.createDecipheriv('aes-256-cbc', key, iv);
   const decryptedData = await Buffer.concat([
     cipher.update(encryptedData),
