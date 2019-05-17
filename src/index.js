@@ -23,27 +23,34 @@ let walletInstance;
 
 var SpringWallet = function() {};
 
+/**
+ * Function to encrypt password
+ */
 async function encryptContent(plaintext) {
   let key = await crypto
     .createHash('md5')
     .update(plaintext)
     .digest('hex');
-  const paddedKey = Buffer.from(('0'.repeat(32)).concat(key), 'hex');
+  const paddedKey = Buffer.from('0'.repeat(32).concat(key), 'hex');
   const iv = crypto.randomBytes(16);
   const cipher = await crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
   const encryptedData = await Buffer.concat([
     cipher.update(plaintext),
     cipher.final()
   ]);
-  const ciphertext = Buffer.concat([paddedKey, iv, encryptedData]).toString('hex');
+  const ciphertext = Buffer.concat([paddedKey, iv, encryptedData]).toString(
+    'hex'
+  );
   return ciphertext;
 }
 
+/**
+ * Function to decrypt password
+ */
 async function decryptContent(ciphertext) {
-
   const dataBuffer = Buffer.from(ciphertext, 'hex');
-  const key = dataBuffer.slice(0,32);
-  const iv = dataBuffer.slice(32,48);
+  const key = dataBuffer.slice(0, 32);
+  const iv = dataBuffer.slice(32, 48);
   const encryptedData = dataBuffer.slice(48);
   const cipher = await crypto.createDecipheriv('aes-256-cbc', key, iv);
   const decryptedData = await Buffer.concat([
@@ -53,6 +60,9 @@ async function decryptContent(ciphertext) {
   return decryptedData.toString();
 }
 
+/**
+ * Function to prompt for password
+ */
 async function promptPassword() {
   const { value: password } = await swal.fire({
     title: 'Enter your password',
@@ -72,11 +82,17 @@ async function promptPassword() {
   return password;
 }
 
+/**
+ * Function to store user encrypted password. 
+ */
 SpringWallet.storePassword = async function storePassword(password) {
   let encryptedPassword = await encryptContent(password);
   sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
 };
 
+/**
+ * Function to get decrypted Password.
+ */
 SpringWallet.getPassword = async function getPassword() {
   let password = sessionStorage.getItem(STORAGE_SESSION_KEY);
 
@@ -102,6 +118,7 @@ SpringWallet.generateMnemonic = bip39.generateMnemonic(128, crypto.randomBytes);
 
 /**
  * Function to initlalize Wallet on user device using encrypted mnemonic and password
+ * Also stores address and encryptedMnemonic in localStorage
  * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
  * @return wallet address
  */
@@ -222,8 +239,7 @@ async function decryptMnemonic(encryptedMnemonic, password) {
 }
 
 /**
- * Function to fetch user wallet's encrypted mnemonic from browser's session storage
- * @param address - user wallet address
+ * Function to fetch user wallet's encrypted mnemonic from browser's local storage
  */
 function getEncryptedMnemonic() {
   const data = localStorage.getItem(STORAGE_SESSION_KEY);
@@ -234,6 +250,9 @@ function getEncryptedMnemonic() {
   return encryptedMnemonic;
 }
 
+/**
+ * Function to fetch user wallet balance
+ */
 SpringWallet.fetchWalletBalance = function fetchWalletBalance(address) {
   let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
   return httpProvider.getBalance(address).then(balance => {
@@ -244,8 +263,6 @@ SpringWallet.fetchWalletBalance = function fetchWalletBalance(address) {
 
 /**
  * Function to unlock a wallet using provided encryptedMnemonic and password
- * @param address - Wallet address
- * @param password - plain text password
  */
 async function unlockWallet() {
   const password = await getPassword();
