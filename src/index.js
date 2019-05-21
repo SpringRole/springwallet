@@ -122,7 +122,7 @@ SpringWallet.generateMnemonic = function generateMnemonic() {
 };
 
 /**
- * Function to initlalize Wallet on user device using encrypted mnemonic and password
+ * Function to initialize Wallet on user device using encrypted mnemonic and password
  * Also stores address and encryptedMnemonic in localStorage
  * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
  * @return wallet address
@@ -134,11 +134,7 @@ SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWalle
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
   const Wallet = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
   const address = await Wallet.getAddress();
-  let store = {
-    address: address,
-    encryptedMnemonic: encryptedMnemonic
-  };
-
+  let store = { address, encryptedMnemonic };
   await localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
   await unlockWallet();
   return address;
@@ -151,7 +147,7 @@ SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWalle
  */
 SpringWallet.encryptMnemonic = async function encryptMnemonic(phrase) {
   if (!bip39.validateMnemonic(phrase)) {
-    throw new Error('Not a valid bip39 nmemonic');
+    throw new Error('Not a valid bip39 mnemonic');
   }
 
   const password = await getPassword();
