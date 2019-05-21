@@ -342,4 +342,6 @@ SpringWallet.sendTransaction = async function sendTransaction(txParams) {
   return txResponse;
 };
 
+window.SpringWallet = SpringWallet;
+
 module.exports = SpringWallet;
