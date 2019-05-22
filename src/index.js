@@ -112,7 +112,6 @@ async function getPassword() {
   const decryptPassword = await decryptContent(password);
   return decryptPassword;
 }
-SpringWallet.getPassword = getPassword;
 
 /**
  * Function to generate 12 words random mnemonic phrase
@@ -239,6 +238,7 @@ async function decryptMnemonic(encryptedMnemonic, password) {
   const mnemonic = await decryptMnemonicBuffer(dataBuffer, password);
   return mnemonic;
 }
+SpringWallet.decryptMnemonic = decryptMnemonic;
 
 /**
  * Function to fetch user wallet's encrypted mnemonic from browser's local storage
