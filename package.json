@@ -1,6 +1,6 @@
 {
-  "name": "springwallet",
-  "version": "0.1.0",
+  "name": "@springrole/springwallet",
+  "version": "0.1.5",
   "description": "Wallet for SpringRole users",
   "main": "index.js",
   "files": [
@@ -40,7 +40,8 @@
   "homepage": "https://github.com/SpringRole/SpringWallet#readme",
   "dependencies": {
     "bip39": "^3.0.1",
-    "ethereumjs-wallet": "^0.6.3"
+    "ethers": "^4.0.27",
+    "sweetalert2": "^8.11.1"
   },
   "devDependencies": {
     "@babel/core": "^7.4.3",
