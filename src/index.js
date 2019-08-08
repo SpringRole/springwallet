@@ -19,6 +19,10 @@ const VANITYURL_ABI = [
   'function changeVanityURL(string _vanity_url, string _springrole_id)'
 ];
 
+let httpProvider = new ethers.providers.JsonRpcProvider(
+  SPRINGROLE_RPC_URL
+);
+
 let walletInstance;
 
 var SpringWallet = function() {};
@@ -131,7 +135,7 @@ SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWalle
 ) {
   const password = await getPassword();
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  const Wallet = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
+  const Wallet = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(httpProvider);
   const address = await Wallet.getAddress();
   let store = { address, encryptedMnemonic };
   await localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
@@ -258,9 +262,6 @@ function getEncryptedMnemonic() {
 SpringWallet.fetchWalletBalance = async function fetchWalletBalance() {
   const data = localStorage.getItem(STORAGE_SESSION_KEY);
   const address = JSON.parse(data).address;
-  let httpProvider = await new ethers.providers.JsonRpcProvider(
-    SPRINGROLE_RPC_URL
-  );
   let balance = await httpProvider.getBalance(address);
   return ethers.utils.formatEther(balance);
 };
@@ -272,7 +273,7 @@ async function unlockWallet() {
   const password = await getPassword();
   const encryptedMnemonic = await getEncryptedMnemonic();
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  walletInstance = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH);
+  walletInstance = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(httpProvider);
   return true;
 }
 
@@ -282,9 +283,7 @@ SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTran
   if (!walletInstance) {
     await unlockWallet();
   }
-  let httpProvider = await new ethers.providers.JsonRpcProvider(
-    SPRINGROLE_RPC_URL
-  );
+
   let contract = await new ethers.Contract(
     txParams.to,
     VANITYURL_ABI,
@@ -305,9 +304,6 @@ SpringWallet.sendAttestationTransaction = async function sendAttestationTransact
     await unlockWallet();
   }
 
-  let httpProvider = await new ethers.providers.JsonRpcProvider(
-    SPRINGROLE_RPC_URL
-  );
   let contract = await new ethers.Contract(
     txParams.to,
     ATTESTATION_ABI,
@@ -323,9 +319,6 @@ SpringWallet.sendTransaction = async function sendTransaction(txParams) {
     await unlockWallet();
   }
 
-  let httpProvider = await new ethers.providers.JsonRpcProvider(
-    SPRINGROLE_RPC_URL
-  );
   const txCount = await httpProvider.getTransactionCount(tx.from);
   let transaction = {
     nonce: txCount,
