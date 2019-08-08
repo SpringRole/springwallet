@@ -39,9 +39,9 @@
   },
   "homepage": "https://github.com/SpringRole/SpringWallet#readme",
   "dependencies": {
-    "bip39": "^3.0.1",
-    "ethers": "^4.0.27",
-    "sweetalert2": "^8.11.1"
+    "bip39": "^3.0.2",
+    "ethers": "^4.0.33",
+    "sweetalert2": "^8.15.2"
   },
   "devDependencies": {
     "@babel/core": "^7.4.3",
