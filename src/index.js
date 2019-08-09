@@ -19,26 +19,24 @@ const VANITYURL_ABI = [
   'function changeVanityURL(string _vanity_url, string _springrole_id)'
 ];
 
-let httpProvider = new ethers.providers.JsonRpcProvider(
-  SPRINGROLE_RPC_URL
-);
+let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
 
 let walletInstance;
 
-var SpringWallet = function() {};
+let SpringWallet = function() {};
 
 /**
  * Function to encrypt password
  */
 async function encryptContent(plaintext) {
-  let key = await crypto
+  let key = crypto
     .createHash('md5')
     .update(plaintext)
     .digest('hex');
   const paddedKey = Buffer.from('0'.repeat(32).concat(key), 'hex');
   const iv = crypto.randomBytes(16);
-  const cipher = await crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
-  const encryptedData = await Buffer.concat([
+  const cipher = crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
+  const encryptedData = Buffer.concat([
     cipher.update(plaintext),
     cipher.final()
   ]);
@@ -56,8 +54,8 @@ async function decryptContent(ciphertext) {
   const key = dataBuffer.slice(0, 32);
   const iv = dataBuffer.slice(32, 48);
   const encryptedData = dataBuffer.slice(48);
-  const cipher = await crypto.createDecipheriv('aes-256-cbc', key, iv);
-  const decryptedData = await Buffer.concat([
+  const cipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  const decryptedData = Buffer.concat([
     cipher.update(encryptedData),
     cipher.final()
   ]);
@@ -89,11 +87,10 @@ async function promptPassword() {
 /**
  * Function to store user encrypted password.
  */
-async function storePassword(password) {
+SpringWallet.storePassword = async password => {
   let encryptedPassword = await encryptContent(password);
   sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
-}
-SpringWallet.storePassword = storePassword;
+};
 
 /**
  * Function to get decrypted Password.
@@ -105,7 +102,7 @@ async function getPassword() {
     password = await promptPassword();
 
     if (password) {
-      await storePassword(password);
+      await SpringWallet.storePassword(password);
       return password;
     } else {
       return password.catch(err => {
@@ -120,27 +117,8 @@ async function getPassword() {
 /**
  * Function to generate 12 words random mnemonic phrase
  */
-SpringWallet.generateMnemonic = function generateMnemonic() {
+SpringWallet.generateMnemonic = () => {
   return bip39.generateMnemonic(128, crypto.randomBytes);
-};
-
-/**
- * Function to initialize Wallet on user device using encrypted mnemonic and password
- * Also stores address and encryptedMnemonic in localStorage
- * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
- * @return wallet address
- */
-SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWallet(
-  encryptedMnemonic
-) {
-  const password = await getPassword();
-  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  const Wallet = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(httpProvider);
-  const address = await Wallet.getAddress();
-  let store = { address, encryptedMnemonic };
-  await localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
-  await unlockWallet();
-  return address;
 };
 
 /**
@@ -148,7 +126,7 @@ SpringWallet.initializeAndUnlockWallet = async function initializeAndUnlockWalle
  * @param phrase - string of the encrypted mnemonic
  * @return hex-encoded string of the encrypted mnemonic
  */
-SpringWallet.encryptMnemonic = async function encryptMnemonic(phrase) {
+SpringWallet.encryptMnemonic = async phrase => {
   if (!bip39.validateMnemonic(phrase)) {
     throw new Error('Not a valid bip39 mnemonic');
   }
@@ -209,7 +187,6 @@ async function decryptMnemonicBuffer(dataBuffer, password) {
     .update(hmacSig)
     .digest()
     .toString('hex');
-
   const hmacDigestHash = crypto
     .createHash('sha256')
     .update(hmacDigest)
@@ -242,7 +219,7 @@ async function decryptMnemonic(encryptedMnemonic, password) {
   const mnemonic = await decryptMnemonicBuffer(dataBuffer, password);
   return mnemonic;
 }
-SpringWallet.decryptMnemonic = decryptMnemonic;
+// SpringWallet.decryptMnemonic = decryptMnemonic;
 
 /**
  * Function to fetch user wallet's encrypted mnemonic from browser's local storage
@@ -259,7 +236,7 @@ function getEncryptedMnemonic() {
 /**
  * Function to fetch user wallet balance
  */
-SpringWallet.fetchWalletBalance = async function fetchWalletBalance() {
+SpringWallet.fetchWalletBalance = async () => {
   const data = localStorage.getItem(STORAGE_SESSION_KEY);
   const address = JSON.parse(data).address;
   let balance = await httpProvider.getBalance(address);
@@ -273,22 +250,37 @@ async function unlockWallet() {
   const password = await getPassword();
   const encryptedMnemonic = await getEncryptedMnemonic();
   const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  walletInstance = await ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(httpProvider);
+  walletInstance = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(
+    httpProvider
+  );
   return true;
 }
 
-SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTransaction(
-  txParams
-) {
+/**
+ * Function to initialize Wallet on user device using encrypted mnemonic and password
+ * Also stores address and encryptedMnemonic in localStorage
+ * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
+ * @return wallet address
+ */
+SpringWallet.initializeAndUnlockWallet = async encryptedMnemonic => {
+  const password = await getPassword();
+  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
+  const Wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(
+    httpProvider
+  );
+  const address = await Wallet.getAddress();
+  let store = { address, encryptedMnemonic };
+  localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
+  await unlockWallet();
+  return address;
+};
+
+SpringWallet.sendVanityReserveTransaction = async txParams => {
   if (!walletInstance) {
     await unlockWallet();
   }
 
-  let contract = await new ethers.Contract(
-    txParams.to,
-    VANITYURL_ABI,
-    httpProvider
-  );
+  let contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
   let contractWithSigner = contract.connect(walletInstance);
   let tx = await contractWithSigner.reserve(
     txParams.vanityUrl,
@@ -297,24 +289,22 @@ SpringWallet.sendVanityReserveTransaction = async function sendVanityReserveTran
   return tx.hash;
 };
 
-SpringWallet.sendAttestationTransaction = async function sendAttestationTransaction(
-  txParams
-) {
+SpringWallet.sendAttestationTransaction = async txParams => {
   if (!walletInstance) {
     await unlockWallet();
   }
 
-  let contract = await new ethers.Contract(
+  let contract = new ethers.Contract(
     txParams.to,
     ATTESTATION_ABI,
     httpProvider
   );
-  let contractWithSigner = await contract.connect(walletInstance);
+  let contractWithSigner = contract.connect(walletInstance);
   let tx = await contractWithSigner.write(txParams._type, txParams._data);
   return tx.hash;
 };
 
-SpringWallet.sendTransaction = async function sendTransaction(txParams) {
+SpringWallet.sendTransaction = async txParams => {
   if (!walletInstance) {
     await unlockWallet();
   }
