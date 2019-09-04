@@ -1,3 +1,5 @@
+/* eslint-disable arrow-parens */
+/* eslint-disable comma-dangle */
 const bip39 = require('bip39');
 const crypto = require('crypto');
 const ethers = require('ethers');
@@ -19,17 +21,18 @@ const VANITYURL_ABI = [
   'function changeVanityURL(string _vanity_url, string _springrole_id)'
 ];
 
-let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
+const httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
 
 let walletInstance;
 
-let SpringWallet = function() {};
+// eslint-disable-next-line func-names
+const SpringWallet = function () {};
 
 /**
  * Function to encrypt password
  */
 async function encryptContent(plaintext) {
-  let key = crypto
+  const key = crypto
     .createHash('md5')
     .update(plaintext)
     .digest('hex');
@@ -88,7 +91,7 @@ async function promptPassword() {
  * Function to store user encrypted password.
  */
 SpringWallet.storePassword = async password => {
-  let encryptedPassword = await encryptContent(password);
+  const encryptedPassword = await encryptContent(password);
   sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
 };
 
@@ -104,11 +107,9 @@ async function getPassword() {
     if (password) {
       await SpringWallet.storePassword(password);
       return password;
-    } else {
-      return password.catch(err => {
-        return err;
-      });
     }
+
+    return password.catch(err => err);
   }
   const decryptPassword = await decryptContent(password);
   return decryptPassword;
@@ -117,9 +118,7 @@ async function getPassword() {
 /**
  * Function to generate 12 words random mnemonic phrase
  */
-SpringWallet.generateMnemonic = () => {
-  return bip39.generateMnemonic(128, crypto.randomBytes);
-};
+SpringWallet.generateMnemonic = () => bip39.generateMnemonic(128, crypto.randomBytes);
 
 /**
  * Function to encrypt a mnemonic using password
@@ -229,7 +228,7 @@ function getEncryptedMnemonic() {
   if (!data) {
     return Error('User not logged in');
   }
-  const encryptedMnemonic = JSON.parse(data).encryptedMnemonic;
+  const { encryptedMnemonic } = JSON.parse(data);
   return encryptedMnemonic;
 }
 
@@ -238,8 +237,8 @@ function getEncryptedMnemonic() {
  */
 SpringWallet.fetchWalletBalance = async () => {
   const data = localStorage.getItem(STORAGE_SESSION_KEY);
-  const address = JSON.parse(data).address;
-  let balance = await httpProvider.getBalance(address);
+  const { address } = JSON.parse(data);
+  const balance = await httpProvider.getBalance(address);
   return ethers.utils.formatEther(balance);
 };
 
@@ -269,7 +268,7 @@ SpringWallet.initializeAndUnlockWallet = async encryptedMnemonic => {
     httpProvider
   );
   const address = await Wallet.getAddress();
-  let store = { address, encryptedMnemonic };
+  const store = { address, encryptedMnemonic };
   localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
   await unlockWallet();
   return address;
@@ -280,9 +279,9 @@ SpringWallet.sendVanityReserveTransaction = async txParams => {
     await unlockWallet();
   }
 
-  let contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
-  let contractWithSigner = contract.connect(walletInstance);
-  let tx = await contractWithSigner.reserve(
+  const contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
+  const contractWithSigner = contract.connect(walletInstance);
+  const tx = await contractWithSigner.reserve(
     txParams.vanityUrl,
     txParams.springrole_id
   );
@@ -294,13 +293,14 @@ SpringWallet.sendAttestationTransaction = async txParams => {
     await unlockWallet();
   }
 
-  let contract = new ethers.Contract(
+  const contract = new ethers.Contract(
     txParams.to,
     ATTESTATION_ABI,
     httpProvider
   );
-  let contractWithSigner = contract.connect(walletInstance);
-  let tx = await contractWithSigner.write(txParams._type, txParams._data);
+  const contractWithSigner = contract.connect(walletInstance);
+  // eslint-disable-next-line no-underscore-dangle
+  const tx = await contractWithSigner.write(txParams._type, txParams._data);
   return tx.hash;
 };
 
@@ -309,8 +309,8 @@ SpringWallet.sendTransaction = async txParams => {
     await unlockWallet();
   }
 
-  const txCount = await httpProvider.getTransactionCount(tx.from);
-  let transaction = {
+  const txCount = await httpProvider.getTransactionCount(txParams.from);
+  const transaction = {
     nonce: txCount,
     gasLimit: txParams.gasLimit,
     gasPrice: ethers.utils.bigNumberify(txParams.gasPrice),
@@ -320,8 +320,8 @@ SpringWallet.sendTransaction = async txParams => {
     chainId: SPRINGCHAIN_ID
   };
 
-  let signedTransaction = await walletInstance.sign(transaction);
-  let txResponse = await httpProvider.sendTransaction(signedTransaction);
+  const signedTransaction = await walletInstance.sign(transaction);
+  const txResponse = await httpProvider.sendTransaction(signedTransaction);
   return txResponse;
 };
 
