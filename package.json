@@ -1,56 +1,72 @@
 {
-  "name": "@springrole/springwallet",
-  "version": "0.1.6",
-  "description": "Wallet for SpringRole users",
-  "main": "index.js",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "scripts": {
-    "dev": "webpack --mode development",
-    "build": "webpack --mode production"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SpringRole/SpringWallet.git"
-  },
-  "keywords": [
-    "SpringRole",
-    "Spring",
-    "Token",
-    "Secure",
-    "Wallet",
-    "Attestation",
-    "Protocol",
-    "VanityURL"
-  ],
-  "author": "SpringRole <https://github.com/SpringRole>",
-  "contributors": [
-    {
-      "name": "Suraj Rawat",
-      "email": "suraj.raw120@gmail.com",
-      "url": "https://github.com/nervehammer"
+    "name": "@springrole/springwallet",
+    "version": "0.1.6",
+    "description": "Wallet for SpringRole users",
+    "main": "dist/springwallet.js",
+    "engines": {
+        "node": ">=8.0.0"
+    },
+    "scripts": {
+        "dev": "webpack --mode development",
+        "build": "webpack --mode production",
+        "lint": "eslint --cache --fix .",
+        "format": "prettier --config ./.prettierrc --write ./src/{*.js,**/*.js}"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/SpringRole/SpringWallet.git"
+    },
+    "keywords": [
+        "SpringRole",
+        "Spring",
+        "Token",
+        "Secure",
+        "Wallet",
+        "Attestation",
+        "Protocol",
+        "VanityURL"
+    ],
+    "author": "SpringRole <https://github.com/SpringRole>",
+    "contributors": [
+        {
+            "name": "Suraj Rawat",
+            "email": "suraj.raw120@gmail.com",
+            "url": "https://github.com/nervehammer"
+        }
+    ],
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/SpringRole/SpringWallet/issues"
+    },
+    "homepage": "https://github.com/SpringRole/SpringWallet#readme",
+    "dependencies": {
+        "babel-eslint": "^10.0.3",
+        "bip39": "^3.0.2",
+        "ethers": "^4.0.33",
+        "sweetalert2": "^8.15.2"
+    },
+    "devDependencies": {
+        "@babel/cli": "^7.6.0",
+        "@babel/core": "^7.6.0",
+        "@babel/plugin-proposal-export-default-from": "^7.5.2",
+        "@babel/plugin-proposal-export-namespace-from": "^7.5.2",
+        "@babel/plugin-transform-runtime": "^7.6.0",
+        "@babel/preset-env": "^7.6.0",
+        "@babel/runtime": "^7.6.0",
+        "babel-loader": "^8.0.6",
+        "babel-register": "^6.26.0",
+        "eslint": "^6.3.0",
+        "eslint-config-prettier": "^6.2.0",
+        "eslint-config-standard": "^14.1.0",
+        "eslint-plugin-import": "^2.18.2",
+        "eslint-plugin-node": "^10.0.0",
+        "eslint-plugin-prettier": "^3.1.0",
+        "eslint-plugin-promise": "^4.2.1",
+        "eslint-plugin-standard": "^4.0.1",
+        "prettier": "^1.18.2",
+        "rollup": "^1.21.2",
+        "rollup-plugin-babel": "^4.3.3",
+        "webpack": "^4.39.1",
+        "webpack-cli": "^3.3.6"
     }
-  ],
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/SpringRole/SpringWallet/issues"
-  },
-  "homepage": "https://github.com/SpringRole/SpringWallet#readme",
-  "dependencies": {
-    "bip39": "^3.0.2",
-    "ethers": "^4.0.33",
-    "sweetalert2": "^8.15.2"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.5.5",
-    "@babel/preset-env": "^7.5.5",
-    "babel-loader": "^8.0.6",
-    "eslint": "^6.3.0",
-    "eslint-config-airbnb-base": "^14.0.0",
-    "eslint-plugin-import": "^2.18.2",
-    "webpack": "^4.39.1",
-    "webpack-cli": "^3.3.6"
-  }
 }
