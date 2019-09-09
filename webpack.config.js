@@ -1,22 +1,25 @@
 const path = require('path');
-
-module.exports = {
-  mode: 'production',
-  entry: './src/index.js',
-  output: {
-    path: path.resolve('dist'),
-    filename: 'index.js'
-  },
-  module: {
-    rules: [
-      {
-        test: /\.js?$/,
-        exclude: /(node_modules)/,
-        use: 'babel-loader'
-      }
-    ]
-  },
-  resolve: {
-    extensions: ['.js']
-  }
+const config = {
+    entry: './src/index.js',
+    target: 'web',
+    output: {
+        path: path.resolve(__dirname, './dist'),
+        filename: 'springwallet.js'
+    },
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                exclude: /node_modules/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: ['@babel/preset-env']
+                    }
+                }
+            }
+        ]
+    }
 };
+
+module.exports = config;
