@@ -1,6 +1,6 @@
 const networks = {
     mainnet: {
-        rpcUrl: 'https://mainnet.infura.io/v3/faa4639b090f46499f29d894da0551a0',
+        rpcUrl: 'https://mainnet.infura.io/v3/607d0ccc6e364affa61439c855e1188a',
         chainId: '1'
     },
     maticAlpha: {

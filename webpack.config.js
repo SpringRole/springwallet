@@ -1,10 +1,13 @@
 const path = require('path');
+const webpack = require('webpack');
 const config = {
-    entry: './src/index.js',
-    target: 'web',
+    entry: './src/springwallet.js',
     output: {
         path: path.resolve(__dirname, './dist'),
-        filename: 'springwallet.js'
+        filename: 'springwallet.js',
+        libraryTarget: 'global',
+        library: 'SpringWallet',
+        libraryExport: 'default'
     },
     module: {
         rules: [
@@ -19,7 +22,8 @@ const config = {
                 }
             }
         ]
-    }
+    },
+    plugins: [new webpack.IgnorePlugin(/^\.\/wordlists\/(?!english)/, /bip39\/src$/)]
 };
 
 module.exports = config;

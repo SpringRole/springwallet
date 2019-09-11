@@ -1,10 +1,11 @@
-import {bip39} from 'bip39';
-import {crypto} from 'crypto';
+import * as bip39 from 'bip39';
+import * as crypto from 'crypto';
 
 /**
- * Function to encrypt a mnemonic using password
+ * Encrypt a mnemonic using password
+ * @method encryptMnemonic
  * @param phrase - string of the encrypted mnemonic
- * @return hex-encoded string of the encrypted mnemonic
+ * @returns {Promise<String>} hex-encoded string of the encrypted mnemonic
  */
 export async function encryptMnemonic(phrase, password) {
     if (!bip39.validateMnemonic(phrase)) {
@@ -34,10 +35,11 @@ export async function encryptMnemonic(phrase, password) {
 }
 
 /**
- * Decrypt a raw mnemonic phrase with a password
- * @param encryptedMnemonic - Hex-encoded string of the encrypted mnemonic
- * @param password - Password
- * @return plain text mnemonic phrase
+ * Decrypt an encrypted mnemonic with a password
+ * @method decryptMnemonic
+ * @param {String} encryptedMnemonic - Hex-encoded string of the encrypted mnemonic
+ * @param {String} password - Password
+ * @return {Promise<String>} mnemonic - plain text mnemonic phrase
  */
 export async function decryptMnemonic(encryptedMnemonic, password) {
     const dataBuffer = Buffer.from(encryptedMnemonic, 'hex');
@@ -82,4 +84,45 @@ export async function decryptMnemonic(encryptedMnemonic, password) {
     }
 
     return mnemonic;
+}
+
+/**
+ * Function to encrypt password
+ * @method encryptSecret
+ * @param {String} email - user email
+ * @param {String} password - password to encrypt
+ * @returns {Promise<String>} hex encoded encrypted password
+ */
+export async function encryptSecret(email, password) {
+    const salt = crypto.randomBytes(16);
+    const keysAndIV = crypto.pbkdf2Sync(email, salt, 100000, 32, 'sha512');
+
+    const encKey = keysAndIV.slice(0, 16);
+    const iv = keysAndIV.slice(16);
+
+    const cipher = crypto.createCipheriv('aes-128-cbc', encKey, iv);
+    const encryptedData = Buffer.concat([cipher.update(password), cipher.final()]);
+    const secret = Buffer.concat([salt, encryptedData]).toString('hex');
+    return secret;
+}
+
+/**
+ * Function to decrypt password
+ * @method decryptSecret
+ * @param {String} email - user email
+ * @param {String} secret - encrypted password
+ * @returns {Promise<String>} decrypted password
+ */
+export async function decryptSecret(email, secret) {
+    const dataBuffer = Buffer.from(secret, 'hex');
+    const salt = dataBuffer.slice(0, 16);
+    const encryptedSecret = dataBuffer.slice(16);
+
+    const keysAndIV = crypto.pbkdf2Sync(email, salt, 100000, 32, 'sha512');
+    const encKey = keysAndIV.slice(0, 16);
+    const iv = keysAndIV.slice(16);
+
+    const cipher = crypto.createDecipheriv('aes-128-cbc', encKey, iv);
+    const decryptedSecret = Buffer.concat([cipher.update(encryptedSecret), cipher.final()]);
+    return decryptedSecret.toString();
 }
