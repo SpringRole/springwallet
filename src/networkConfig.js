@@ -7,9 +7,9 @@ const networks = {
         rpcUrl: 'https://alpha.ethereum.matic.network',
         chainId: '4626'
     },
-    maticTestnet: {
-        rpcUrl: 'https://testnet2.matic.network',
-        chainId: '8995'
+    maticBeta: {
+        rpcUrl: 'https://beta.matic.network',
+        chainId: '15001'
     }
 };
 
