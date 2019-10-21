@@ -93,9 +93,9 @@ export async function decryptMnemonic(encryptedMnemonic, password) {
  * @param {String} password - password to encrypt
  * @returns {Promise<String>} hex encoded encrypted password
  */
-export async function encryptSecret(email, password) {
+export async function encryptSecret(address, password) {
     const salt = crypto.randomBytes(16);
-    const keysAndIV = crypto.pbkdf2Sync(email, salt, 100000, 32, 'sha512');
+    const keysAndIV = crypto.pbkdf2Sync(address, salt, 100000, 32, 'sha512');
 
     const encKey = keysAndIV.slice(0, 16);
     const iv = keysAndIV.slice(16);
@@ -109,16 +109,16 @@ export async function encryptSecret(email, password) {
 /**
  * Function to decrypt password
  * @method decryptSecret
- * @param {String} email - user email
+ * @param {String} address - user address
  * @param {String} secret - encrypted password
  * @returns {Promise<String>} decrypted password
  */
-export async function decryptSecret(email, secret) {
+export async function decryptSecret(address, secret) {
     const dataBuffer = Buffer.from(secret, 'hex');
     const salt = dataBuffer.slice(0, 16);
     const encryptedSecret = dataBuffer.slice(16);
 
-    const keysAndIV = crypto.pbkdf2Sync(email, salt, 100000, 32, 'sha512');
+    const keysAndIV = crypto.pbkdf2Sync(address, salt, 100000, 32, 'sha512');
     const encKey = keysAndIV.slice(0, 16);
     const iv = keysAndIV.slice(16);
 
