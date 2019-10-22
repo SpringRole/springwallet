@@ -4,7 +4,7 @@ const config = {
     entry: './src/springwallet.js',
     output: {
         path: path.resolve(__dirname, './dist'),
-        filename: 'springwallet.js',
+        filename: 'springwallet.web.js',
         libraryTarget: 'global',
         library: 'SpringWallet',
         libraryExport: 'default'
