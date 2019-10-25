@@ -1,4 +1,5 @@
 import * as bip39 from 'bip39';
+import crypto from 'crypto';
 import {ethers} from 'ethers';
 import Swal from 'sweetalert2';
 import {networkConfig} from './networkConfig';
@@ -268,4 +269,4 @@ export default class SpringWallet {
     }
 }
 
-export {decryptMnemonic};
+// export {decryptMnemonic};
