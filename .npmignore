@@ -1,0 +1,8 @@
+.vscode
+src/
+.babelrc
+.editorconfig
+.eslintignore
+.eslintrc.json
+.prettierrc
+webpack.config.js
