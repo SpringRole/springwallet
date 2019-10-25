@@ -1,29 +1,34 @@
-const path = require('path');
 const webpack = require('webpack');
-const config = {
-    entry: './src/springwallet.js',
+
+const libraryName = 'SpringWallet';
+
+const webConfig = {
+    entry: `${__dirname}/src/index.js`,
+    target: 'web',
     output: {
-        path: path.resolve(__dirname, './dist'),
-        filename: 'springwallet.web.js',
-        libraryTarget: 'global',
-        library: 'SpringWallet',
-        libraryExport: 'default'
+        path: `${__dirname}/dist`,
+        filename: `${libraryName}.umd.js`,
+        library: libraryName,
+        libraryTarget: 'umd',
+        libraryExport: 'default',
+        umdNamedDefine: true
     },
     module: {
-        rules: [
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                    options: {
-                        presets: ['@babel/preset-env']
-                    }
-                }
-            }
-        ]
+        rules: [{test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader'}]
     },
     plugins: [new webpack.IgnorePlugin(/^\.\/wordlists\/(?!english)/, /bip39\/src$/)]
 };
 
-module.exports = config;
+const nodeConfig = {
+    ...webConfig,
+    target: 'node',
+    output: {
+        path: `${__dirname}/dist`,
+        filename: `${libraryName}.node.js`,
+        library: libraryName,
+        libraryExport: 'default',
+        libraryTarget: 'commonjs2'
+    }
+};
+
+module.exports = [webConfig, nodeConfig];
