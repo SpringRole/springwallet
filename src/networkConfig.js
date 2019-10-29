@@ -13,11 +13,8 @@ const networks = {
     }
 };
 
-export function networkConfig(network) {
-    let nObj;
-    if (typeof network === 'string') {
-        nObj = networks[network];
-    }
+export default function networkConfig(network) {
+    const nObj = typeof network === 'string' ? Object.assign({}, networks[network]) : network;
 
     if (typeof nObj !== 'object') {
         throw new Error("illegal 'network' parameter");
