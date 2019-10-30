@@ -2,6 +2,10 @@ import * as bip39 from 'bip39';
 import crypto from 'crypto';
 import {ethers} from 'ethers';
 import Swal from 'sweetalert2';
+import Web3ProviderEngine from 'web3-provider-engine';
+import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
+import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
+import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
 import {networkConfig} from './networkConfig';
 import {encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret} from './utils/encryption';
 import {vanityReserve, attest, sendTransaction} from './utils/transactions';
@@ -83,8 +87,46 @@ export default class SpringWallet {
             throw new Error("'network' not defined");
         }
         this.network = network;
+        this.provider = this.initProvider(network);
+    }
 
-        this.provider = this.setProvider(networkConfig(network));
+    initProvider(opts) {
+        const engine = new Web3ProviderEngine();
+        engine.addProvider(
+            new FixtureSubprovider({
+                web3_clientVersion: 'SpringWallet/v0.1.7/javascript',
+                net_listening: true,
+                eth_hashrate: '0x00',
+                eth_mining: false,
+                eth_syncing: true
+            })
+        );
+
+        opts.getPrivateKey = async (address, cb) => {
+            if (address.toLowerCase() === this.walletAddress) {
+                const privKey = this.wallet.getPrivateKey().toString('hex');
+                cb(null, Buffer.from(privKey, 'hex'));
+            } else {
+                cb('unknown account');
+            }
+        };
+
+        opts.getAccounts = async (cb) => {
+            if (!this.wallet) {
+                this.unlockWallet();
+            }
+            const address = await this.wallet.getChecksumAddressString();
+            this.walletAddress = address;
+            cb(false, [address]);
+        };
+
+        engine.addProvider(new HookedWalletSubprovider(opts));
+        engine.addProvider(new RpcSubprovider(opts));
+        engine.on('error', (error) => {
+            console.error(error);
+        });
+        engine.start();
+        return engine;
     }
 
     /**
