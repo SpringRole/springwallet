@@ -1,14 +1,13 @@
 import * as bip39 from 'bip39';
 import crypto from 'crypto';
-import {ethers} from 'ethers';
+import * as HDKey from 'ethereumjs-wallet/hdkey';
 import Swal from 'sweetalert2';
 import Web3ProviderEngine from 'web3-provider-engine';
 import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
 import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
 import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
-import {networkConfig} from './networkConfig';
+import networkConfig from './networkConfig';
 import {encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret} from './utils/encryption';
-import {vanityReserve, attest, sendTransaction} from './utils/transactions';
 
 const STORAGE_SESSION_KEY = 'wallet-session';
 const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
@@ -23,6 +22,7 @@ function getEncryptedMnemonic() {
     if (!data) {
         return Error('User not logged in');
     }
+
     const {encryptedMnemonic} = JSON.parse(data);
     return encryptedMnemonic;
 }
@@ -86,7 +86,7 @@ export default class SpringWallet {
         if (!network) {
             throw new Error("'network' not defined");
         }
-        this.network = network;
+        this.network = networkConfig(network);
         this.provider = this.initProvider(network);
     }
 
@@ -130,27 +130,6 @@ export default class SpringWallet {
     }
 
     /**
-     * Set Provider
-     * @param {Object|String} network
-     * @returns {HttpProvider} httpProvider
-     */
-    setProvider(network) {
-        const httpProvider = new ethers.providers.JsonRpcProvider(network.rpcUrl);
-        return httpProvider;
-    }
-
-    /**
-     * Set Provider
-     * @method changeNetwork
-     * @param {Object|String} network
-     * @returns {HttpProvider} httpProvider
-     */
-    changeNetwork(newNetwork) {
-        this.network = newNetwork;
-        this.provider = this.setProvider(networkConfig(newNetwork));
-    }
-
-    /**
      * Generate 12-words mnemonic phrase
      * @method generateMnemonic
      * @returns {String} mnemonic
@@ -179,17 +158,22 @@ export default class SpringWallet {
         if (!bip39.validateMnemonic(phrase)) {
             throw new Error('Not a valid bip39 mnemonic');
         }
-        const wallet = ethers.Wallet.fromMnemonic(phrase, MNEMONIC_PATH);
-        const address = await wallet.getAddress();
         const encryptedMnemonic = await encryptMnemonic(phrase, password);
+        const hdKey = HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(phrase));
+        const wallet = hdKey
+            .derivePath(MNEMONIC_PATH)
+            .deriveChild(0)
+            .getWallet();
+        const address = wallet.getChecksumAddressString();
         return {address, encryptedMnemonic};
     }
 
     /**
      * Encrypt Plain text mnemonic phrase
      * @method encryptMnemonic
-     * @param {Object|String} network
-     * @returns {Promise<HttpProvider>} httpProvider
+     * @param {String} mnemonic phrase
+     * @param {String} password
+     * @returns {String} encryptMnemonic
      */
     static encryptMnemonic(phrase, password) {
         return encryptMnemonic(phrase, password);
@@ -212,7 +196,11 @@ export default class SpringWallet {
      * @returns wallet instance
      */
     initializeWalletFromMnemonic(mnemonic) {
-        const wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(this.provider);
+        const hdKey = HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
+        const wallet = hdKey
+            .derivePath(MNEMONIC_PATH)
+            .deriveChild(0)
+            .getWallet();
         return wallet;
     }
 
@@ -242,73 +230,13 @@ export default class SpringWallet {
         const password = await getPassword();
         const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
         const Wallet = this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
-        const derivedWalletAddress = await Wallet.getAddress();
+        const derivedWalletAddress = await Wallet.getChecksumAddressString();
         if (derivedWalletAddress !== address) {
-            throw new Error('Not your wallet mnemonics');
+            throw new Error('Different wallet mnemonics');
         }
         SpringWallet.setWalletSession(address, encryptMnemonic);
         return true;
     }
-
-    /**
-     * Sign Message
-     * @method signMessage
-     * @param {<String>}
-     * @returns {Promise<String>}
-     */
-    async signMessage(message) {
-        return this.wallet.signMessage(message);
-    }
-
-    /**
-     * Get wallet Ether Balance
-     * @method fetchWalletEthBalance
-     * @returns {Promise<String|Number>}
-     */
-    async fetchWalletEthBalance() {
-        const address = await this.wallet.getAddress();
-        const balance = await this.provider.getBalance(address);
-        return ethers.utils.formatEther(balance);
-    }
-
-    /**
-     * Send Vanity Reserve transaction to blockchain
-     * @method sendVanityReserveTransaction
-     * @param txParams
-     * @returns {Promise<String>} txHash
-     */
-    async sendVanityReserveTransaction(txParams) {
-        if (!this.wallet) {
-            await this.unlockWallet();
-        }
-        return vanityReserve(txParams, this.wallet);
-    }
-
-    /**
-     * Send an Attestation transaction to blockchain
-     * @method sendAttestationTransaction
-     * @param txParams
-     * @returns {Promise<String>} txHash
-     */
-    async sendAttestationTransaction(txParams) {
-        if (!this.wallet) {
-            await this.unlockWallet();
-        }
-        return attest(txParams, this.wallet);
-    }
-
-    /**
-     * Send generic transaction to blockchain
-     * @method sendTransaction
-     * @param txParams
-     * @returns {Promise<String>} txHash
-     */
-    async sendTransaction(txParams) {
-        if (!this.wallet) {
-            await this.unlockWallet();
-        }
-        return sendTransaction(txParams, this.wallet);
-    }
 }
 
-// export {decryptMnemonic};
+export {decryptMnemonic};
