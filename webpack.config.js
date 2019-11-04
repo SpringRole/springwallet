@@ -16,6 +16,11 @@ const webConfig = {
     module: {
         rules: [{test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader'}]
     },
+    resolve: {
+        alias: {
+            scrypt: `${__dirname}/node_modules/scrypt.js`
+        }
+    },
     plugins: [new webpack.IgnorePlugin(/^\.\/wordlists\/(?!english)/, /bip39\/src$/)]
 };
 
