@@ -113,9 +113,9 @@ export default class SpringWallet {
 
         opts.getAccounts = async (cb) => {
             if (!this.wallet) {
-                this.unlockWallet();
+                await this.unlockWallet();
             }
-            const address = await this.wallet.getChecksumAddressString();
+            const address = this.wallet.getChecksumAddressString();
             this.walletAddress = address;
             cb(false, [address]);
         };
