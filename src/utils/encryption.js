@@ -89,7 +89,7 @@ export async function decryptMnemonic(encryptedMnemonic, password) {
 /**
  * Function to encrypt password
  * @method encryptSecret
- * @param {String} email - user email
+ * @param {String} address - user wallet address
  * @param {String} password - password to encrypt
  * @returns {Promise<String>} hex encoded encrypted password
  */

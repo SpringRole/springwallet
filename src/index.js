@@ -103,7 +103,7 @@ export default class SpringWallet {
         );
 
         opts.getPrivateKey = async (address, cb) => {
-            if (address.toLowerCase() === this.walletAddress) {
+            if (address.toLowerCase() === this.walletAddress.toLowerCase()) {
                 const privKey = this.wallet.getPrivateKey().toString('hex');
                 cb(null, Buffer.from(privKey, 'hex'));
             } else {
