@@ -60,17 +60,12 @@ async function promptPassword() {
 async function getPassword() {
     const data = localStorage.getItem(STORAGE_SESSION_KEY);
     const address = JSON.parse(data).address;
-    let encryptedPassword = sessionStorage.getItem(STORAGE_SESSION_KEY);
+    const encryptedPassword = sessionStorage.getItem(STORAGE_SESSION_KEY);
 
     if (!encryptedPassword) {
-        const password = await promptPassword();
-
-        if (password) {
-            encryptedPassword = await encryptSecret(address, password);
-            sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
-            return password;
-        }
+        return promptPassword();
     }
+
     return decryptSecret(address, encryptedPassword);
 }
 
@@ -195,9 +190,9 @@ export default class SpringWallet {
      * @param path Mnemonic Path
      * @returns wallet instance
      */
-    initializeWalletFromMnemonic(mnemonic) {
-        const hdKey = HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
-        const wallet = hdKey
+    async initializeWalletFromMnemonic(mnemonic) {
+        const hdKey = await HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
+        const wallet = await hdKey
             .derivePath(MNEMONIC_PATH)
             .deriveChild(0)
             .getWallet();
@@ -213,13 +208,19 @@ export default class SpringWallet {
     async unlockWallet() {
         const password = await getPassword();
         const encryptedMnemonic = getEncryptedMnemonic();
-        const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-        this.wallet = this.initializeWalletFromMnemonic(mnemonic);
-        return true;
+        try {
+            const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
+            this.wallet = await this.initializeWalletFromMnemonic(mnemonic);
+            const address = await this.wallet.getChecksumAddressString();
+            await encryptSecret(address, password);
+            return true;
+        } catch (error) {
+            throw new Error('Invalid Password');
+        }
     }
 
     /**
-     * Reinitializes a wallet with new encrypted mnemonic
+     * Reinitialize a wallet with new encrypted mnemonic
      * checks if the derived wallet address is same
      * @method reinitializeWallet
      * @param {String} address - wallet address
@@ -229,7 +230,7 @@ export default class SpringWallet {
     static async reinitializeWallet(address, encryptedMnemonic) {
         const password = await getPassword();
         const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-        const Wallet = this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
+        const Wallet = await this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
         const derivedWalletAddress = await Wallet.getChecksumAddressString();
         if (derivedWalletAddress !== address) {
             throw new Error('Different wallet mnemonics');
