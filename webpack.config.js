@@ -24,16 +24,4 @@ const webConfig = {
     plugins: [new webpack.IgnorePlugin(/^\.\/wordlists\/(?!english)/, /bip39\/src$/)]
 };
 
-const nodeConfig = {
-    ...webConfig,
-    target: 'node',
-    output: {
-        path: `${__dirname}/dist`,
-        filename: `${libraryName}.node.js`,
-        library: libraryName,
-        libraryExport: 'default',
-        libraryTarget: 'commonjs2'
-    }
-};
-
-module.exports = [webConfig, nodeConfig];
+module.exports = webConfig;
