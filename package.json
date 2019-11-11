@@ -1,6 +1,6 @@
 {
     "name": "@springrole/springwallet",
-    "version": "0.1.7-beta.5",
+    "version": "0.1.7-beta.7",
     "description": "Wallet for SpringRole users",
     "main": "dist/SpringWallet.node.js",
     "browser": "dist/SpringWallet.umd.js",
