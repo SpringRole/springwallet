@@ -1,22 +1,27 @@
-const path = require('path');
+const webpack = require('webpack');
 
-module.exports = {
-  mode: 'production',
-  entry: './src/index.js',
-  output: {
-    path: path.resolve('dist'),
-    filename: 'index.js'
-  },
-  module: {
-    rules: [
-      {
-        test: /\.js?$/,
-        exclude: /(node_modules)/,
-        use: 'babel-loader'
-      }
-    ]
-  },
-  resolve: {
-    extensions: ['.js']
-  }
+const libraryName = 'SpringWallet';
+
+const webConfig = {
+    entry: `${__dirname}/src/index.js`,
+    target: 'web',
+    output: {
+        path: `${__dirname}/dist`,
+        filename: `${libraryName}.umd.js`,
+        library: libraryName,
+        libraryTarget: 'umd',
+        libraryExport: 'default',
+        umdNamedDefine: true
+    },
+    module: {
+        rules: [{test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader'}]
+    },
+    resolve: {
+        alias: {
+            scrypt: `${__dirname}/node_modules/scrypt.js`
+        }
+    },
+    plugins: [new webpack.IgnorePlugin(/^\.\/wordlists\/(?!english)/, /bip39\/src$/)]
 };
+
+module.exports = webConfig;

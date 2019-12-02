@@ -61,4 +61,10 @@ typings/
 .next
 
 # dist
-dist
+dist/
+
+# lib
+lib/
+
+# vscode
+.vscode

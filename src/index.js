@@ -1,330 +1,243 @@
-const bip39 = require('bip39');
-const crypto = require('crypto');
-const ethers = require('ethers');
-const swal = require('sweetalert2');
+import * as bip39 from 'bip39';
+import crypto from 'crypto';
+import * as HDKey from 'ethereumjs-wallet/hdkey';
+import Swal from 'sweetalert2';
+import Web3ProviderEngine from 'web3-provider-engine';
+import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
+import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
+import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
+import networkConfig from './networkConfig';
+import {encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret} from './utils/encryption';
 
-const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
-const SPRINGROLE_RPC_URL = 'https://chain.springrole.com';
-const SPRINGCHAIN_ID = 202242799;
 const STORAGE_SESSION_KEY = 'wallet-session';
-
-const ATTESTATION_ABI = [
-  'event Attest(address _address,string _type,string _data)',
-  'function write(string _type,string _data) public returns (bool)'
-];
-
-const VANITYURL_ABI = [
-  'event VanityReserved(address _to, string _vanity_url)',
-  'function reserve(string _vanity_url,string _springrole_id)',
-  'function changeVanityURL(string _vanity_url, string _springrole_id)'
-];
-
-let httpProvider = new ethers.providers.JsonRpcProvider(SPRINGROLE_RPC_URL);
-
-let walletInstance;
-
-let SpringWallet = function() {};
+const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
 
 /**
- * Function to encrypt password
- */
-async function encryptContent(plaintext) {
-  let key = crypto
-    .createHash('md5')
-    .update(plaintext)
-    .digest('hex');
-  const paddedKey = Buffer.from('0'.repeat(32).concat(key), 'hex');
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', paddedKey, iv);
-  const encryptedData = Buffer.concat([
-    cipher.update(plaintext),
-    cipher.final()
-  ]);
-  const ciphertext = Buffer.concat([paddedKey, iv, encryptedData]).toString(
-    'hex'
-  );
-  return ciphertext;
-}
-
-/**
- * Function to decrypt password
- */
-async function decryptContent(ciphertext) {
-  const dataBuffer = Buffer.from(ciphertext, 'hex');
-  const key = dataBuffer.slice(0, 32);
-  const iv = dataBuffer.slice(32, 48);
-  const encryptedData = dataBuffer.slice(48);
-  const cipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-  const decryptedData = Buffer.concat([
-    cipher.update(encryptedData),
-    cipher.final()
-  ]);
-  return decryptedData.toString();
-}
-
-/**
- * Function to prompt for password
- */
-async function promptPassword() {
-  const { value: password } = await swal.fire({
-    title: 'Enter your password',
-    input: 'password',
-    inputPlaceholder: 'Enter your password',
-    inputAttributes: {
-      maxlength: 50,
-      autocapitalize: 'off',
-      autocorrect: 'off'
-    }
-  });
-
-  if (!password) {
-    throw new Error('Password not entered');
-  }
-
-  return password;
-}
-
-/**
- * Function to store user encrypted password.
- */
-SpringWallet.storePassword = async password => {
-  let encryptedPassword = await encryptContent(password);
-  sessionStorage.setItem(STORAGE_SESSION_KEY, encryptedPassword);
-};
-
-/**
- * Function to get decrypted Password.
- */
-async function getPassword() {
-  let password = sessionStorage.getItem(STORAGE_SESSION_KEY);
-
-  if (!password) {
-    password = await promptPassword();
-
-    if (password) {
-      await SpringWallet.storePassword(password);
-      return password;
-    } else {
-      return password.catch(err => {
-        return err;
-      });
-    }
-  }
-  const decryptPassword = await decryptContent(password);
-  return decryptPassword;
-}
-
-/**
- * Function to generate 12 words random mnemonic phrase
- */
-SpringWallet.generateMnemonic = () => {
-  return bip39.generateMnemonic(128, crypto.randomBytes);
-};
-
-/**
- * Function to encrypt a mnemonic using password
- * @param phrase - string of the encrypted mnemonic
- * @return hex-encoded string of the encrypted mnemonic
- */
-SpringWallet.encryptMnemonic = async phrase => {
-  if (!bip39.validateMnemonic(phrase)) {
-    throw new Error('Not a valid bip39 mnemonic');
-  }
-
-  const password = await getPassword();
-  const plaintextNormalized = Buffer.from(
-    bip39.mnemonicToEntropy(phrase),
-    'hex'
-  );
-
-  // AES-128-CBC with SHA256 HMAC
-  const salt = crypto.randomBytes(16);
-  const keysAndIV = crypto.pbkdf2Sync(password, salt, 100000, 48, 'sha512');
-  const encKey = keysAndIV.slice(0, 16);
-  const macKey = keysAndIV.slice(16, 32);
-  const iv = keysAndIV.slice(32, 48);
-
-  const cipher = crypto.createCipheriv('aes-128-cbc', encKey, iv);
-  let cipherText = cipher.update(plaintextNormalized).toString('hex');
-  cipherText += cipher.final().toString('hex');
-
-  const hmacPayload = Buffer.concat([salt, Buffer.from(cipherText, 'hex')]);
-
-  const hmac = crypto.createHmac('sha256', macKey);
-  hmac.write(hmacPayload);
-  const hmacDigest = hmac.digest();
-
-  const payload = Buffer.concat([
-    salt,
-    hmacDigest,
-    Buffer.from(cipherText, 'hex')
-  ]);
-
-  return payload.toString('hex');
-};
-
-async function decryptMnemonicBuffer(dataBuffer, password) {
-  const salt = dataBuffer.slice(0, 16);
-  const hmacSig = dataBuffer.slice(16, 48);
-  const cipherText = dataBuffer.slice(48);
-  const hmacPayload = Buffer.concat([salt, cipherText]);
-
-  const keysAndIV = crypto.pbkdf2Sync(password, salt, 100000, 48, 'sha512');
-  const encKey = keysAndIV.slice(0, 16);
-  const macKey = keysAndIV.slice(16, 32);
-  const iv = keysAndIV.slice(32, 48);
-
-  const decipher = crypto.createDecipheriv('aes-128-cbc', encKey, iv);
-
-  let plaintext = decipher.update(cipherText).toString('hex');
-  plaintext += decipher.final().toString('hex');
-
-  const hmac = crypto.createHmac('sha256', macKey);
-  hmac.write(hmacPayload);
-  const hmacDigest = hmac.digest();
-  const hmacSigHash = crypto
-    .createHash('sha256')
-    .update(hmacSig)
-    .digest()
-    .toString('hex');
-  const hmacDigestHash = crypto
-    .createHash('sha256')
-    .update(hmacDigest)
-    .digest()
-    .toString('hex');
-
-  if (hmacSigHash !== hmacDigestHash) {
-    throw new Error('Wrong password (HMAC mismatch)');
-  }
-
-  const mnemonic = bip39.entropyToMnemonic(plaintext);
-
-  if (!bip39.validateMnemonic(mnemonic)) {
-    throw new Error('Wrong password (invalid plaintext)');
-  }
-
-  return mnemonic;
-}
-
-/**
- * Decrypt a raw mnemonic phrase with a password
- * @param encryptedMnemonic - Buffer or hex-encoded string of the encrypted mnemonic
- * @param password - Password
- * @return raw mnemonic phrase
- */
-async function decryptMnemonic(encryptedMnemonic, password) {
-  const dataBuffer = Buffer.isBuffer(encryptedMnemonic)
-    ? encryptedMnemonic
-    : Buffer.from(encryptedMnemonic, 'hex');
-  const mnemonic = await decryptMnemonicBuffer(dataBuffer, password);
-  return mnemonic;
-}
-// SpringWallet.decryptMnemonic = decryptMnemonic;
-
-/**
- * Function to fetch user wallet's encrypted mnemonic from browser's local storage
+ * Fetch encrypted mnemonic from browser's local storage
+ * @method getEncryptedMnemonic
+ * @returns {String} encryptedMnemonic
  */
 function getEncryptedMnemonic() {
-  const data = localStorage.getItem(STORAGE_SESSION_KEY);
-  if (!data) {
-    return Error('User not logged in');
-  }
-  const encryptedMnemonic = JSON.parse(data).encryptedMnemonic;
-  return encryptedMnemonic;
+    const data = localStorage.getItem(STORAGE_SESSION_KEY);
+    if (!data) {
+        return Error('User not logged in');
+    }
+
+    const {encryptedMnemonic} = JSON.parse(data);
+    return encryptedMnemonic;
 }
 
 /**
- * Function to fetch user wallet balance
+ * Prompt for wallet password
+ * @method promptPassword
+ * @returns {Promise<String>} password
  */
-SpringWallet.fetchWalletBalance = async () => {
-  const data = localStorage.getItem(STORAGE_SESSION_KEY);
-  const address = JSON.parse(data).address;
-  let balance = await httpProvider.getBalance(address);
-  return ethers.utils.formatEther(balance);
-};
+async function promptPassword() {
+    const {value: password} = await Swal.fire({
+        title: 'Enter your password',
+        input: 'password',
+        inputPlaceholder: 'Enter your password',
+        inputAttributes: {
+            maxlength: 50,
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        }
+    });
 
-/**
- * Function to unlock a wallet using provided encryptedMnemonic and password
- */
-async function unlockWallet() {
-  const password = await getPassword();
-  const encryptedMnemonic = await getEncryptedMnemonic();
-  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  walletInstance = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(
-    httpProvider
-  );
-  return true;
+    if (!password) {
+        throw new Error('Password not entered');
+    }
+
+    return password;
 }
 
 /**
- * Function to initialize Wallet on user device using encrypted mnemonic and password
- * Also stores address and encryptedMnemonic in localStorage
- * @param encryptedMnemonic - hex-encoded string of the encrypted mnemonic
- * @return wallet address
+ * Get wallet password from encrypted password
+ * @method getPassword
+ * @param address - wallet address
+ * @returns {Promise<String>} password
  */
-SpringWallet.initializeAndUnlockWallet = async encryptedMnemonic => {
-  const password = await getPassword();
-  const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-  const Wallet = ethers.Wallet.fromMnemonic(mnemonic, MNEMONIC_PATH).connect(
-    httpProvider
-  );
-  const address = await Wallet.getAddress();
-  let store = { address, encryptedMnemonic };
-  localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(store));
-  await unlockWallet();
-  return address;
-};
+async function getPassword() {
+    const data = localStorage.getItem(STORAGE_SESSION_KEY);
+    const address = JSON.parse(data).address;
+    const encryptedPassword = sessionStorage.getItem(STORAGE_SESSION_KEY);
 
-SpringWallet.sendVanityReserveTransaction = async txParams => {
-  if (!walletInstance) {
-    await unlockWallet();
-  }
+    if (!encryptedPassword) {
+        return promptPassword();
+    }
 
-  let contract = new ethers.Contract(txParams.to, VANITYURL_ABI, httpProvider);
-  let contractWithSigner = contract.connect(walletInstance);
-  let tx = await contractWithSigner.reserve(
-    txParams.vanityUrl,
-    txParams.springrole_id
-  );
-  return tx.hash;
-};
+    return decryptSecret(address, encryptedPassword);
+}
 
-SpringWallet.sendAttestationTransaction = async txParams => {
-  if (!walletInstance) {
-    await unlockWallet();
-  }
+/**
+ * `SpringWallet` class
+ */
+export default class SpringWallet {
+    /**
+     * @param {Object|String} network
+     * @constructor
+     */
+    constructor(network) {
+        if (!network) {
+            throw new Error("'network' not defined");
+        }
+        this.network = networkConfig(network);
+        this.provider = this.initProvider(network);
+    }
 
-  let contract = new ethers.Contract(
-    txParams.to,
-    ATTESTATION_ABI,
-    httpProvider
-  );
-  let contractWithSigner = contract.connect(walletInstance);
-  let tx = await contractWithSigner.write(txParams._type, txParams._data);
-  return tx.hash;
-};
+    initProvider(opts) {
+        const engine = new Web3ProviderEngine();
+        engine.addProvider(
+            new FixtureSubprovider({
+                web3_clientVersion: 'SpringWallet/v0.1.7/javascript',
+                net_listening: true,
+                eth_hashrate: '0x00',
+                eth_mining: false,
+                eth_syncing: true
+            })
+        );
 
-SpringWallet.sendTransaction = async txParams => {
-  if (!walletInstance) {
-    await unlockWallet();
-  }
+        opts.getPrivateKey = async (address, cb) => {
+            if (address.toLowerCase() === this.walletAddress.toLowerCase()) {
+                const privKey = this.wallet.getPrivateKey().toString('hex');
+                cb(null, Buffer.from(privKey, 'hex'));
+            } else {
+                cb('unknown account');
+            }
+        };
 
-  const txCount = await httpProvider.getTransactionCount(tx.from);
-  let transaction = {
-    nonce: txCount,
-    gasLimit: txParams.gasLimit,
-    gasPrice: ethers.utils.bigNumberify(txParams.gasPrice),
-    to: txParams.to,
-    value: ethers.utils.parseEther(txParams.value),
-    data: txParams.data,
-    chainId: SPRINGCHAIN_ID
-  };
+        opts.getAccounts = async (cb) => {
+            if (!this.wallet) {
+                await this.unlockWallet();
+            }
+            const address = this.wallet.getChecksumAddressString();
+            this.walletAddress = address;
+            cb(false, [address]);
+        };
 
-  let signedTransaction = await walletInstance.sign(transaction);
-  let txResponse = await httpProvider.sendTransaction(signedTransaction);
-  return txResponse;
-};
+        engine.addProvider(new HookedWalletSubprovider(opts));
+        engine.addProvider(new RpcSubprovider(opts));
+        engine.on('error', (error) => {
+            console.error(error);
+        });
+        engine.start();
+        return engine;
+    }
 
-window.SpringWallet = SpringWallet;
+    /**
+     * Generate 12-words mnemonic phrase
+     * @method generateMnemonic
+     * @returns {String} mnemonic
+     */
+    static generateMnemonic() {
+        return bip39.generateMnemonic(128, crypto.randomBytes);
+    }
 
-module.exports = SpringWallet;
+    /**
+     * Check validity of 12-words mnemonic phrase
+     * @method isValidMnemonic
+     * @param {String} phrase
+     * @returns {Boolean}
+     */
+    static isValidMnemonic(phrase) {
+        return bip39.validateMnemonic(phrase);
+    }
+
+    /**
+     * Returns wallet address
+     * @method createWallet
+     * @param {String} 12-words Plain mnemonic phrase
+     * @returns {String} wallet address
+     */
+    static async createWallet(phrase, password) {
+        if (!bip39.validateMnemonic(phrase)) {
+            throw new Error('Not a valid bip39 mnemonic');
+        }
+        const encryptedMnemonic = await encryptMnemonic(phrase, password);
+        const hdKey = HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(phrase));
+        const wallet = hdKey
+            .derivePath(MNEMONIC_PATH)
+            .deriveChild(0)
+            .getWallet();
+        const address = wallet.getChecksumAddressString();
+        return {address, encryptedMnemonic};
+    }
+
+    /**
+     * Encrypt Plain text mnemonic phrase
+     * @method encryptMnemonic
+     * @param {String} mnemonic phrase
+     * @param {String} password
+     * @returns {String} encryptMnemonic
+     */
+    static encryptMnemonic(phrase, password) {
+        return encryptMnemonic(phrase, password);
+    }
+
+    /**
+     * Set wallet session in browser's localStorage
+     * @method setWalletSession
+     * @param {String} address - derived wallet address
+     * @param {String} encryptedMnemonic
+     */
+    static setWalletSession(address, encryptedMnemonic) {
+        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({address, encryptedMnemonic}));
+    }
+
+    /**
+     * Initialize wallet from plain text mnemonic
+     * @param mnemonic Plain text mnemonic phrase
+     * @param path Mnemonic Path
+     * @returns wallet instance
+     */
+    async initializeWalletFromMnemonic(mnemonic) {
+        const hdKey = await HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
+        const wallet = await hdKey
+            .derivePath(MNEMONIC_PATH)
+            .deriveChild(0)
+            .getWallet();
+        return wallet;
+    }
+
+    /**
+     * Unlocks a wallet
+     * @method unlockWallet
+     * @param {String} encryptedMnemonic
+     * @returns {Promise<Boolean>}
+     */
+    async unlockWallet() {
+        const password = await getPassword();
+        const encryptedMnemonic = getEncryptedMnemonic();
+        try {
+            const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
+            this.wallet = await this.initializeWalletFromMnemonic(mnemonic);
+            const address = await this.wallet.getChecksumAddressString();
+            await encryptSecret(address, password);
+            return true;
+        } catch (error) {
+            throw new Error('Invalid Password');
+        }
+    }
+
+    /**
+     * Reinitialize a wallet with new encrypted mnemonic
+     * checks if the derived wallet address is same
+     * @method reinitializeWallet
+     * @param {String} address - wallet address
+     * @param {String} encryptedMnemonic - new encrypted mnemonic
+     * @returns {Promise<Boolean>}
+     */
+    static async reinitializeWallet(address, encryptedMnemonic) {
+        const password = await getPassword();
+        const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
+        const Wallet = await this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
+        const derivedWalletAddress = await Wallet.getChecksumAddressString();
+        if (derivedWalletAddress !== address) {
+            throw new Error('Different wallet mnemonics');
+        }
+        SpringWallet.setWalletSession(address, encryptMnemonic);
+        return true;
+    }
+}
+
+export {decryptMnemonic};
