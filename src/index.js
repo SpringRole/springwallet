@@ -7,7 +7,7 @@ import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
 import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
 import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
 import networkConfig from './networkConfig';
-import {encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret} from './utils/encryption';
+import { encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret } from './utils/encryption';
 
 const STORAGE_SESSION_KEY = 'wallet-session';
 const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
@@ -23,7 +23,7 @@ function getEncryptedMnemonic() {
         return Error('User not logged in');
     }
 
-    const {encryptedMnemonic} = JSON.parse(data);
+    const { encryptedMnemonic } = JSON.parse(data);
     return encryptedMnemonic;
 }
 
@@ -33,7 +33,7 @@ function getEncryptedMnemonic() {
  * @returns {Promise<String>} password
  */
 async function promptPassword() {
-    const {value: password} = await Swal.fire({
+    const { value: password } = await Swal.fire({
         title: 'Enter your password',
         input: 'password',
         inputPlaceholder: 'Enter your password',
@@ -160,7 +160,7 @@ export default class SpringWallet {
             .deriveChild(0)
             .getWallet();
         const address = wallet.getChecksumAddressString();
-        return {address, encryptedMnemonic};
+        return { address, encryptedMnemonic };
     }
 
     /**
@@ -181,7 +181,7 @@ export default class SpringWallet {
      * @param {String} encryptedMnemonic
      */
     static setWalletSession(address, encryptedMnemonic) {
-        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({address, encryptedMnemonic}));
+        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({ address, encryptedMnemonic }));
     }
 
     /**
@@ -240,4 +240,4 @@ export default class SpringWallet {
     }
 }
 
-export {decryptMnemonic};
+export { decryptMnemonic };

@@ -14,7 +14,7 @@ const webConfig = {
         umdNamedDefine: true
     },
     module: {
-        rules: [{test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader'}]
+        rules: [{ test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader' }]
     },
     resolve: {
         alias: {

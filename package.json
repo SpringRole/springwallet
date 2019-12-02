@@ -13,12 +13,10 @@
         "node": ">=8.0.0"
     },
     "scripts": {
-        "dev": "webpack --mode development",
-        "build": "npm run build:node && npm run build:webpack",
-        "build:node": "babel src --out-dir lib",
-        "build:webpack": "webpack --mode production",
-        "lint": "eslint --cache --fix .",
-        "format": "prettier --config ./.prettierrc --write ./src/{*.js,**/*.js}"
+        "build": "./node_module/.bin/babel src --out-dir lib",
+        "lint": "./node_module/.bin/eslint .",
+        "lint:fix": "./node_module/.bin/eslint --fix .",
+        "format": "./node_module/.bin/prettier --ignore-path .gitignore --write ./{*.json,**/*.json}"
     },
     "repository": {
         "type": "git",
@@ -50,6 +48,8 @@
     "dependencies": {
         "bip39": "^3.0.2",
         "ethereumjs-wallet": "^0.6.3",
+        "husky": "^3.1.0",
+        "lint-staged": "^9.5.0",
         "sweetalert2": "^8.15.2",
         "web3-provider-engine": "^15.0.3"
     },
@@ -65,14 +65,27 @@
         "babel-loader": "^8.0.6",
         "eslint": "^6.3.0",
         "eslint-config-prettier": "^6.2.0",
-        "eslint-config-standard": "^14.1.0",
         "eslint-plugin-import": "^2.18.2",
         "eslint-plugin-node": "^10.0.0",
         "eslint-plugin-prettier": "^3.1.0",
         "eslint-plugin-promise": "^4.2.1",
-        "eslint-plugin-standard": "^4.0.1",
         "prettier": "^1.18.2",
         "webpack": "^4.39.1",
         "webpack-cli": "^3.3.6"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "*.js": [
+            "./node_modules/.bin/eslint --ignore-pattern '!.eslintrc.js --fix",
+            "git add"
+        ],
+        "*.{json,css,md}": [
+            "./node_modules/.bin/prettier --write",
+            "git add"
+        ]
     }
 }
