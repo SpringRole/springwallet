@@ -1,12 +1,12 @@
 import * as bip39 from 'bip39';
 import crypto from 'crypto';
 import * as HDKey from 'ethereumjs-wallet/hdkey';
-import Swal from 'sweetalert2';
 import Web3ProviderEngine from 'web3-provider-engine';
 import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
 import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
 import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
 import networkConfig from './networkConfig';
+// eslint-disable-next-line no-unused-vars
 import { encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret } from './utils/encryption';
 
 const STORAGE_SESSION_KEY = 'wallet-session';
@@ -17,6 +17,7 @@ const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
  * @method getEncryptedMnemonic
  * @returns {String} encryptedMnemonic
  */
+// eslint-disable-next-line no-unused-vars
 function getEncryptedMnemonic() {
     const data = localStorage.getItem(STORAGE_SESSION_KEY);
     if (!data) {
@@ -25,48 +26,6 @@ function getEncryptedMnemonic() {
 
     const { encryptedMnemonic } = JSON.parse(data);
     return encryptedMnemonic;
-}
-
-/**
- * Prompt for wallet password
- * @method promptPassword
- * @returns {Promise<String>} password
- */
-async function promptPassword() {
-    const { value: password } = await Swal.fire({
-        title: 'Enter your password',
-        input: 'password',
-        inputPlaceholder: 'Enter your password',
-        inputAttributes: {
-            maxlength: 50,
-            autocapitalize: 'off',
-            autocorrect: 'off'
-        }
-    });
-
-    if (!password) {
-        throw new Error('Password not entered');
-    }
-
-    return password;
-}
-
-/**
- * Get wallet password from encrypted password
- * @method getPassword
- * @param address - wallet address
- * @returns {Promise<String>} password
- */
-async function getPassword() {
-    const data = localStorage.getItem(STORAGE_SESSION_KEY);
-    const address = JSON.parse(data).address;
-    const encryptedPassword = sessionStorage.getItem(STORAGE_SESSION_KEY);
-
-    if (!encryptedPassword) {
-        return promptPassword();
-    }
-
-    return decryptSecret(address, encryptedPassword);
 }
 
 /**
@@ -107,9 +66,6 @@ export default class SpringWallet {
         };
 
         opts.getAccounts = async (cb) => {
-            if (!this.wallet) {
-                await this.unlockWallet();
-            }
             const address = this.wallet.getChecksumAddressString();
             this.walletAddress = address;
             cb(false, [address]);
@@ -200,26 +156,6 @@ export default class SpringWallet {
     }
 
     /**
-     * Unlocks a wallet
-     * @method unlockWallet
-     * @param {String} encryptedMnemonic
-     * @returns {Promise<Boolean>}
-     */
-    async unlockWallet() {
-        const password = await getPassword();
-        const encryptedMnemonic = getEncryptedMnemonic();
-        try {
-            const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-            this.wallet = await this.initializeWalletFromMnemonic(mnemonic);
-            const address = await this.wallet.getChecksumAddressString();
-            await encryptSecret(address, password);
-            return true;
-        } catch (error) {
-            throw new Error('Invalid Password');
-        }
-    }
-
-    /**
      * Reinitialize a wallet with new encrypted mnemonic
      * checks if the derived wallet address is same
      * @method reinitializeWallet
@@ -228,7 +164,8 @@ export default class SpringWallet {
      * @returns {Promise<Boolean>}
      */
     static async reinitializeWallet(address, encryptedMnemonic) {
-        const password = await getPassword();
+        // const password = await getPassword();
+        // eslint-disable-next-line no-undef
         const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
         const Wallet = await this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
         const derivedWalletAddress = await Wallet.getChecksumAddressString();
