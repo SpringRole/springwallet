@@ -39,7 +39,6 @@
     "dependencies": {
         "bip39": "^3.0.2",
         "ethereumjs-wallet": "^0.6.3",
-        "sweetalert2": "^8.15.2",
         "web3-provider-engine": "^15.0.3"
     },
     "devDependencies": {
