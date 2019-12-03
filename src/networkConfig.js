@@ -14,6 +14,7 @@ const networks = {
 };
 
 export default function networkConfig(network) {
+    // TODO: Add infura mainnet prod url
     const nObj = typeof network === 'string' ? Object.assign({}, networks[network]) : network;
 
     if (typeof nObj !== 'object') {
