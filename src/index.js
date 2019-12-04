@@ -6,27 +6,10 @@ import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
 import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
 import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
 import networkConfig from './networkConfig';
-// eslint-disable-next-line no-unused-vars
 import { encryptMnemonic, encryptSecret, decryptMnemonic, decryptSecret } from './utils/encryption';
 
 const STORAGE_SESSION_KEY = 'wallet-session';
 const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
-
-/**
- * Fetch encrypted mnemonic from browser's local storage
- * @method getEncryptedMnemonic
- * @returns {String} encryptedMnemonic
- */
-// eslint-disable-next-line no-unused-vars
-function getEncryptedMnemonic() {
-    const data = localStorage.getItem(STORAGE_SESSION_KEY);
-    if (!data) {
-        return Error('User not logged in');
-    }
-
-    const { encryptedMnemonic } = JSON.parse(data);
-    return encryptedMnemonic;
-}
 
 /**
  * `SpringWallet` class
@@ -131,6 +114,39 @@ export default class SpringWallet {
     }
 
     /**
+     * Decrypt an encrypted mnemonic with a password
+     * @method decryptMnemonic
+     * @param {String} encryptedMnemonic - Hex-encoded string of the encrypted mnemonic
+     * @param {String} password - Password
+     * @return {Promise<String>} mnemonic - plain text mnemonic phrase
+     */
+    static decryptMnemonic(encryptedMnemonic, password) {
+        return decryptMnemonic(encryptedMnemonic, password);
+    }
+
+    /**
+     * Function to encrypt password
+     * @method encryptSecret
+     * @param {String} address - user wallet address
+     * @param {String} password - password to encrypt
+     * @returns {Promise<String>} hex encoded encrypted password
+     */
+    static encryptSecret(address, password) {
+        return encryptSecret(address, password);
+    }
+
+    /**
+     * Function to decrypt password
+     * @method decryptSecret
+     * @param {String} address - user address
+     * @param {String} secret - encrypted password
+     * @returns {Promise<String>} decrypted password
+     */
+    static decryptSecret(address, secret) {
+        return decryptSecret(address, secret);
+    }
+
+    /**
      * Set wallet session in browser's localStorage
      * @method setWalletSession
      * @param {String} address - derived wallet address
@@ -138,6 +154,21 @@ export default class SpringWallet {
      */
     static setWalletSession(address, encryptedMnemonic) {
         localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({ address, encryptedMnemonic }));
+    }
+
+    /**
+     * Fetch encrypted mnemonic from browser's local storage
+     * @method getEncryptedMnemonic
+     * @returns {String} encryptedMnemonic
+     */
+    static getWalletSession() {
+        const data = localStorage.getItem(STORAGE_SESSION_KEY);
+        if (!data) {
+            return Error('User not logged in');
+        }
+
+        const { address, encryptedMnemonic } = JSON.parse(data);
+        return { address, encryptedMnemonic };
     }
 
     /**
@@ -154,27 +185,4 @@ export default class SpringWallet {
             .getWallet();
         return wallet;
     }
-
-    /**
-     * Reinitialize a wallet with new encrypted mnemonic
-     * checks if the derived wallet address is same
-     * @method reinitializeWallet
-     * @param {String} address - wallet address
-     * @param {String} encryptedMnemonic - new encrypted mnemonic
-     * @returns {Promise<Boolean>}
-     */
-    static async reinitializeWallet(address, encryptedMnemonic) {
-        // const password = await getPassword();
-        // eslint-disable-next-line no-undef
-        const mnemonic = await decryptMnemonic(encryptedMnemonic, password);
-        const Wallet = await this.initializeWalletFromMnemonic(mnemonic, MNEMONIC_PATH);
-        const derivedWalletAddress = await Wallet.getChecksumAddressString();
-        if (derivedWalletAddress !== address) {
-            throw new Error('Different wallet mnemonics');
-        }
-        SpringWallet.setWalletSession(address, encryptMnemonic);
-        return true;
-    }
 }
-
-export { decryptMnemonic };
