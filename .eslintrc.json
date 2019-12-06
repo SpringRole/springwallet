@@ -1,17 +1,15 @@
 {
-    "parser": "babel-eslint",
     "env": {
         "browser": true,
-        "commonjs": true,
         "es6": true,
         "node": true
     },
-    "extends": ["standard", "prettier", "prettier/standard"],
+    "extends": ["eslint:recommended", "plugin:prettier/recommended"],
     "parserOptions": {
-        "ecmaVersion": 2017,
+        "ecmaVersion": 2018,
         "sourceType": "module"
     },
-    "plugins": ["prettier", "standard"],
+    "plugins": ["prettier"],
     "rules": {
         "no-useless-constructor": 0,
         "no-new": 0,
