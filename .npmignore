@@ -2,6 +2,7 @@
 src/
 .babelrc
 .editorconfig
+.eslintcache
 .eslintignore
 .eslintrc.json
 .prettierrc
