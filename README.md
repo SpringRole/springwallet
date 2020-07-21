@@ -1,117 +1,103 @@
 # SpringWallet
 
-- [About](#about)
-- [Usage](#usage)
-- [Contributing](#contributing)
+-   [About](#about)
+-   [Usage](#usage)
+-   [Contributing](#contributing)
 
 ## About
 
-SpringWallet - A simple wallet for flexible identity management
+SpringWallet - A simple wallet for flexible identity management for your frontend application
 
-## Usage
+#### Basic Usage
 
 1.  Install `springwallet` with `npm`.
 
-```bash
-npm install springwallet --save
-```
+    ```npm install springwallet --save``` or ```yarn add springwallet```
 
 2. Import springwallet into your project.
 
-```js
-const SpringWallet = require('springwallet')
-```
-
+    ```js 
+    import SpringWallet from '@springrole/springwallet';
+    ```
 3. Generate 12 words random mnemonic
 
-```js
-const mnemonic = SpringWallet.generateMnemonic();
-```
+    ```js
+    const mnemonic = SpringWallet.generateMnemonic();
+    ```
+4. Create a new wallet using plain text mnemonic and encrypt it with password
 
-4. Store encrypted Password in Client
+    ```js
+    async function createWallet(plainTextMnemonic, password) {
+        const encryptedMnemonic = await encryptMnemonic(plainTextMnemonic, password); // encrypting mnemonic
+        const wallet = await SpringWallet.initializeWalletFromMnemonic(plainTextMnemonic); // initializing wallet 
+        const address = wallet.getChecksumAddressString(); // wallet address
+        const key = wallet.getPrivateKey().toString('hex'); // private key
+        await SpringWallet.setWalletSession(address, encryptedMnemonic); // saving wallet session in localStorage
+        sessionStorage.setItem('wallet-session', key); // persist wallet private key in sessionStorage
+        return true;
+    }
+    ```
 
-```js
-SpringWallet.storePassword(password);
-```
-Note: Plain text password will be the input and the encrypted password will be stored in browser's sessionStorage at key 'wallet-session'
+   **Note**:  encrypted mnemonic and address of the wallet will be store in localStorage at key 'wallet-session'
 
-5. Encrypt mnemonic
+5. Fetch wallet's address and encrypted mnemonic
 
-```js
-SpringWallet.encryptMnemonic(mnemonic).then(function(encryptedMnemonic) {
-    // Do Something like initialize wallet
-    console.log("encryptedMnemonic:", encryptedMnemonic));
-    SpringWallet.initializeAndUnlockWallet(encryptedMnemonic);
-})
-```
-Note: mnemonic will be encrypted with the stored password in client side.
+    ```js
+    const { address, encryptedMnemonic } = SpringWallet.getWalletSession();
+    ```
+6. Decrypt encryptedMnemonic and unlock wallet
 
-6. Initalize a wallet and unlocks it simultaneously
+    ```js
+    async function unlockWallet(encryptedMnemonic, password) {
+      let plainTextMnemonic;
+      try {
+        plainTextMnemonic = await decryptMnemonic(encryptedMnemonic, password);
+      } catch {
+        return false;
+      }
+      return SpringWallet.unlockWallet(plainTextMnemonic);
+    }
+    ```
 
-```js
-SpringWallet.initializeAndUnlockWallet(encryptedMnemonic).then(function(walletAddress) {
-    // Do Something
-})
-```
-Note: This function will initalize a wallet instance also this will store wallet address and encryptedMnemonic in localStorage at key 'wallet-session'  
+7. Use SpringWallet provider with web3.js
 
-7. Fetch User's balance
+    ```js
+    const springwallet = new SpringWallet({
+        rpcUrl: "http://localhost:8545",
+        chainId: "1337"
+      });
+    
+    const web3 = new Web3(springwallet.provider);
+    return web3;
+    ```
+    **NOTE** SpringWallet needs to be unlocked before performing any web3 actions, like `getAccounts()`, `getBalance()`
 
-```js
-SpringWallet.fetchWalletBalance().then(function(balance) {
-    // Do something
-    console.log("user balance:", balance);
-})
-```
-8. Generic sendTransaction function to interact with SpringChain 
+#### Advance Usage
 
-```js
-txParams = {
-    from: "user address",
-    to: "receiver address OR contract address",
-    gasLimit: "gas limit",
-    gasPrice: "gas price", 
-    value: "value to send",
-    data: "abi encoded data"
-};
+1. Change SpringWallet password
 
-SpringWallet.sendTransaction(txParams).then(function(txHash) {
-    // Do Something 
-    console.log("transaction hash:", txHash);
-})
-```
+    ```js
+    async function changeWalletPassword(address, encryptedMnemonic, oldPassword, newPassword) {
+      const mnemonicPhrase = await decryptMnemonic(encryptedMnemonic, oldPassword);
+      const newEncryptedMnemonic = await encryptMnemonic(mnemonicPhrase, newPassword);
+      const status = await updateEncryptedMnemonic(address, newEncryptedMnemonic);
+      return status;
+    }
+    ```
+    **NOTE** This will decrypt mnemonic with old password and reencrypts it using new password which will create new encrypted mnemonic 
+    
+2. Reset SpringWallet password, needs the plaintext mnemonic 
 
-9. Call reserve function of Vanity contract of Springrole platform 
-
-```js
-txParams = {
-    from: "user address",
-    to: "VanityURL contract address",
-    vanityUrl: "vanity url",
-    springrole_id: "User springrole id"  
-};
-
-SpringWallet.sendVanityReserveTransaction(txParams).then(function(txHash) {
-    // Do Something 
-    console.log("transaction hash:", txHash);
-})
-```
-10. Call write function of Attestation contract of Springrole platform 
-
-```js
-txParams = {
-    from: "user address",
-    to: "Attestation contract address",
-    _type_: "type of attestation",
-    _data: "Data"  
-}
-
-SpringWallet.sendAttestationTransaction(txParams).then(function(txHash) {
-    // Do Something
-    console.log("transaction hash:", txHash);
-})
-```
-
+    ```js
+    async function resetWalletPassword(plainTextMnemonic, newPassword) {
+      const newEncryptedMnemonic = await encryptMnemonic(plainTextMnemonic, newPassword);
+      const wallet = await SpringWallet.initializeWalletFromMnemonic(plainTextMnemonic);
+      const walletAddress = wallet.getChecksumAddressString();
+      const status = await updateEncryptedMnemonic(walletAddress, newEncryptedMnemonic);
+      return status;
+    }
+    ```
+    
 ## Contributing
 
 TODO
