@@ -1,9 +1,11 @@
-import * as bip39 from 'bip39';
-import crypto from 'crypto';
-import * as HDKey from 'ethereumjs-wallet/hdkey';
+import { generateMnemonic, validateMnemonic, mnemonicToSeed } from 'bip39';
+import { randomBytes } from 'crypto';
+import { hdkey } from 'ethereumjs-wallet';
 import Web3ProviderEngine from 'web3-provider-engine';
 import FixtureSubprovider from 'web3-provider-engine/subproviders/fixture.js';
+import NonceSubprovider from 'web3-provider-engine/subproviders/nonce-tracker.js';
 import RpcSubprovider from 'web3-provider-engine/subproviders/rpc.js';
+import WebSocketSubProvider from 'web3-provider-engine/subproviders/websocket.js';
 import HookedWalletSubprovider from 'web3-provider-engine/subproviders/hooked-wallet-ethtx.js';
 import networkConfig from './networkConfig';
 import { encryptMnemonic, decryptMnemonic } from './utils/encryption';
@@ -14,15 +16,13 @@ const MNEMONIC_PATH = "m/44'/60'/0'/0/0";
 /**
  * `SpringWallet` class
  */
-export default class SpringWallet {
+export class SpringWallet {
     /**
-     * @param {Object|String} network
+     * @param {Object} network
      * @constructor
      */
     constructor(network) {
-        if (!network) {
-            throw new Error("'network' not defined");
-        }
+        if (!network) throw new Error("'network' not defined");
         this.network = networkConfig(network);
         this.walletAddress = this.initWalletAddress();
         this.privateKey = this.initPrivateKey();
@@ -49,7 +49,7 @@ export default class SpringWallet {
         const engine = new Web3ProviderEngine();
         engine.addProvider(
             new FixtureSubprovider({
-                web3_clientVersion: 'SpringWallet/v0.1.7/javascript',
+                web3_clientVersion: 'SpringWallet/v0.2.0/javascript',
                 net_listening: true,
                 eth_hashrate: '0x00',
                 eth_mining: false,
@@ -58,9 +58,9 @@ export default class SpringWallet {
         );
 
         opts.getPrivateKey = (address, cb) => {
-            if (address.toLowerCase() === this.walletAddress.toLowerCase()) {
+            if (address.toLowerCase() == this.walletAddress.toLowerCase()) {
                 if (this.privateKey) {
-                    cb(null, this.privateKey);
+                    cb(null, Buffer.from(this.privateKey, 'hex'));
                 } else if (this.wallet) {
                     const privKey = this.wallet.getPrivateKey().toString('hex');
                     cb(null, Buffer.from(privKey, 'hex'));
@@ -84,11 +84,14 @@ export default class SpringWallet {
             cb(false, [address]);
         };
 
+        engine.addProvider(new NonceSubprovider());
         engine.addProvider(new HookedWalletSubprovider(opts));
-        engine.addProvider(new RpcSubprovider(opts));
-        engine.on('error', (error) => {
-            console.error(error);
-        });
+        if (opts && opts.rpcUrl && opts.rpcUrl.indexOf && opts.rpcUrl.indexOf('wss://') == 0) {
+            engine.addProvider(new WebSocketSubProvider(opts));
+        } else {
+            engine.addProvider(new RpcSubprovider(opts));
+        }
+
         engine.start();
         return engine;
     }
@@ -99,7 +102,7 @@ export default class SpringWallet {
      * @returns {String} mnemonic
      */
     static generateMnemonic() {
-        return bip39.generateMnemonic(128, crypto.randomBytes);
+        return generateMnemonic(128, randomBytes);
     }
 
     /**
@@ -109,7 +112,7 @@ export default class SpringWallet {
      * @returns {Boolean}
      */
     static isValidMnemonic(phrase) {
-        return bip39.validateMnemonic(phrase);
+        return validateMnemonic(phrase);
     }
 
     /**
@@ -166,11 +169,9 @@ export default class SpringWallet {
      * @returns wallet instance
      */
     static async initializeWalletFromMnemonic(mnemonic) {
-        const hdKey = await HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(mnemonic));
-        const wallet = await hdKey
-            .derivePath(MNEMONIC_PATH)
-            .deriveChild(0)
-            .getWallet();
+        const seed = mnemonicToSeed(mnemonic);
+        const hdKey = await hdkey.fromMasterSeed(seed);
+        const wallet = await hdKey.derivePath(MNEMONIC_PATH).deriveChild(0).getWallet();
         return wallet;
     }
 
