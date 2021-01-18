@@ -12,12 +12,12 @@ SpringWallet - A simple wallet for flexible identity management for your fronten
 
 1.  Install `springwallet` with `npm`.
 
-    ```npm install springwallet --save``` or ```yarn add springwallet```
+    ```npm install @springrole/springwallet --save``` or ```yarn add @springrole/springwallet```
 
 2. Import springwallet into your project.
 
     ```js 
-    import SpringWallet from '@springrole/springwallet';
+    import { SpringWallet } from '@springrole/springwallet';
     ```
 3. Generate 12 words random mnemonic
 
@@ -28,7 +28,7 @@ SpringWallet - A simple wallet for flexible identity management for your fronten
 
     ```js
     async function createWallet(plainTextMnemonic, password) {
-        const encryptedMnemonic = await encryptMnemonic(plainTextMnemonic, password); // encrypting mnemonic
+        const encryptedMnemonic = await SpringWallet.encryptMnemonic(plainTextMnemonic, password); // encrypting mnemonic
         const wallet = await SpringWallet.initializeWalletFromMnemonic(plainTextMnemonic); // initializing wallet 
         const address = wallet.getChecksumAddressString(); // wallet address
         const key = wallet.getPrivateKey().toString('hex'); // private key
@@ -51,7 +51,7 @@ SpringWallet - A simple wallet for flexible identity management for your fronten
     async function unlockWallet(encryptedMnemonic, password) {
       let plainTextMnemonic;
       try {
-        plainTextMnemonic = await decryptMnemonic(encryptedMnemonic, password);
+        plainTextMnemonic = await SpringWallet.decryptMnemonic(encryptedMnemonic, password);
       } catch {
         return false;
       }
@@ -78,10 +78,9 @@ SpringWallet - A simple wallet for flexible identity management for your fronten
 
     ```js
     async function changeWalletPassword(address, encryptedMnemonic, oldPassword, newPassword) {
-      const mnemonicPhrase = await decryptMnemonic(encryptedMnemonic, oldPassword);
-      const newEncryptedMnemonic = await encryptMnemonic(mnemonicPhrase, newPassword);
-      const status = await updateEncryptedMnemonic(address, newEncryptedMnemonic);
-      return status;
+      const mnemonicPhrase = await SpringWallet.decryptMnemonic(encryptedMnemonic, oldPassword);
+      const newEncryptedMnemonic = await SpringWallet.encryptMnemonic(mnemonicPhrase, newPassword);
+      return true;
     }
     ```
     **NOTE** This will decrypt mnemonic with old password and reencrypts it using new password which will create new encrypted mnemonic 
@@ -90,11 +89,10 @@ SpringWallet - A simple wallet for flexible identity management for your fronten
 
     ```js
     async function resetWalletPassword(plainTextMnemonic, newPassword) {
-      const newEncryptedMnemonic = await encryptMnemonic(plainTextMnemonic, newPassword);
+      const newEncryptedMnemonic = await SpringWallet.encryptMnemonic(plainTextMnemonic, newPassword);
       const wallet = await SpringWallet.initializeWalletFromMnemonic(plainTextMnemonic);
       const walletAddress = wallet.getChecksumAddressString();
-      const status = await updateEncryptedMnemonic(walletAddress, newEncryptedMnemonic);
-      return status;
+      return true;
     }
     ```
     
