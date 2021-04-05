@@ -24,6 +24,7 @@ export class SpringWallet {
     constructor(network) {
         if (!network) throw new Error("'network' not defined");
         this.network = networkConfig(network);
+        this.wallet = undefined;
         this.walletAddress = this.initWalletAddress();
         this.privateKey = this.initPrivateKey();
         this.provider = this.initProvider(this.network);
@@ -120,7 +121,7 @@ export class SpringWallet {
      * @method encryptMnemonic
      * @param {String} mnemonic phrase
      * @param {String} password
-     * @returns {String} encryptMnemonic
+     * @returns {Promise<String>} encryptMnemonic
      */
     static encryptMnemonic(phrase, password) {
         return encryptMnemonic(phrase, password);
@@ -150,14 +151,11 @@ export class SpringWallet {
     /**
      * Fetch encrypted mnemonic from browser's local storage
      * @method getEncryptedMnemonic
-     * @returns {String} encryptedMnemonic
+     * @returns {Object} encryptedMnemonic
      */
     static getWalletSession() {
         const data = localStorage.getItem(STORAGE_SESSION_KEY);
-        if (!data) {
-            return null;
-        }
-
+        if (!data) return null;
         const { address, encryptedMnemonic } = JSON.parse(data);
         return { address, encryptedMnemonic };
     }
@@ -169,13 +167,13 @@ export class SpringWallet {
      * @returns wallet instance
      */
     static async initializeWalletFromMnemonic(mnemonic) {
-        const seed = mnemonicToSeed(mnemonic);
+        const seed = await mnemonicToSeed(mnemonic);
         const hdKey = await hdkey.fromMasterSeed(seed);
         const wallet = await hdKey.derivePath(MNEMONIC_PATH).deriveChild(0).getWallet();
         return wallet;
     }
 
-    async unlockWallet(mnemonic) {
+    static async unlockWallet(mnemonic) {
         const wallet = await SpringWallet.initializeWalletFromMnemonic(mnemonic);
         this.wallet = wallet;
         this.walletAddress = wallet.getChecksumAddressString();
@@ -185,3 +183,5 @@ export class SpringWallet {
         return this.walletAddress;
     }
 }
+
+export { encryptMnemonic, decryptMnemonic };

@@ -60,7 +60,7 @@ export async function decryptMnemonic(encryptedMnemonic, password) {
     const decipher = createDecipheriv('aes-128-cbc', encKey, iv);
     const plaintextBuffer = Buffer.concat([decipher.update(cipherText), decipher.final()]);
 
-    const hmac = crypto.createHmac('sha256', macKey);
+    const hmac = createHmac('sha256', macKey);
     hmac.write(hmacPayload);
 
     const hmacDigest = hmac.digest();

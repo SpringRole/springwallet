@@ -1,6 +1,6 @@
 {
     "name": "@springrole/springwallet",
-    "version": "0.2.0",
+    "version": "0.2.2",
     "description": "Wallet for SpringRole users",
     "main": "dist/index.js",
     "scripts": {
@@ -44,6 +44,7 @@
     "devDependencies": {
         "@babel/cli": "^7.12.10",
         "@babel/core": "^7.12.10",
+        "@babel/plugin-transform-runtime": "^7.12.10",
         "@babel/preset-env": "^7.12.11",
         "babel-preset-minify": "^0.5.1",
         "eslint": "^7.18.0",
